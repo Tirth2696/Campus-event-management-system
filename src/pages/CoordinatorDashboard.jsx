@@ -15,24 +15,45 @@ function CoordinatorDashboard() {
   const [editingEvent, setEditingEvent] = useState(null);
 
   // ===============================
+  // GET LOGGED-IN COORDINATOR ID
+  // ===============================
+
+  const getCoordinatorId = () => {
+    return localStorage.getItem("user_id");
+  };
+
+  // ===============================
   // FETCH EVENTS
   // ===============================
+
   const fetchEvents = async () => {
+    const coordinatorId = getCoordinatorId();
+
+    if (!coordinatorId) {
+      alert(
+        "Coordinator information not found. Please login again."
+      );
+      return;
+    }
+
     try {
       const response = await fetch(
-        "http://localhost:5000/manage-events"
+        `http://localhost:5000/manage-events/coordinator/${coordinatorId}`
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to fetch events");
+        alert(
+          data.message || "Failed to fetch events"
+        );
         return;
       }
 
       setEvents(data);
     } catch (error) {
       console.log(error);
+
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
@@ -42,22 +63,36 @@ function CoordinatorDashboard() {
   // ===============================
   // FETCH PARTICIPANTS
   // ===============================
+
   const fetchParticipants = async () => {
+    const coordinatorId = getCoordinatorId();
+
+    if (!coordinatorId) {
+      alert(
+        "Coordinator information not found. Please login again."
+      );
+      return;
+    }
+
     try {
       const response = await fetch(
-        "http://localhost:5000/participants"
+        `http://localhost:5000/participants/coordinator/${coordinatorId}`
       );
 
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to fetch participants");
+        alert(
+          data.message ||
+            "Failed to fetch participants"
+        );
         return;
       }
 
       setParticipants(data);
     } catch (error) {
       console.log(error);
+
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
@@ -67,6 +102,7 @@ function CoordinatorDashboard() {
   // ===============================
   // LOAD EVENTS
   // ===============================
+
   useEffect(() => {
     fetchEvents();
   }, []);
@@ -74,15 +110,31 @@ function CoordinatorDashboard() {
   // ===============================
   // CREATE EVENT
   // ===============================
+
   const handleCreateEvent = async (e) => {
     e.preventDefault();
 
-    const title = e.target.title.value;
-    const description = e.target.description.value;
+    const title = e.target.title.value.trim();
+    const description =
+      e.target.description.value.trim();
     const eventDate = e.target.eventDate.value;
-    const venue = e.target.venue.value;
+    const venue = e.target.venue.value.trim();
 
-    if (!title || !description || !eventDate || !venue) {
+    const coordinatorId = getCoordinatorId();
+
+    if (!coordinatorId) {
+      alert(
+        "Coordinator information not found. Please login again."
+      );
+      return;
+    }
+
+    if (
+      !title ||
+      !description ||
+      !eventDate ||
+      !venue
+    ) {
       alert("Please fill all fields");
       return;
     }
@@ -96,7 +148,9 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: 1,
+            coordinator_id: Number(
+              coordinatorId
+            ),
             title: title,
             description: description,
             event_date: eventDate,
@@ -107,7 +161,10 @@ function CoordinatorDashboard() {
 
       const data = await response.json();
 
-      alert(data.message);
+      alert(
+        data.message ||
+          "Event creation completed."
+      );
 
       if (response.ok) {
         e.target.reset();
@@ -116,6 +173,7 @@ function CoordinatorDashboard() {
       }
     } catch (error) {
       console.log(error);
+
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
@@ -125,6 +183,7 @@ function CoordinatorDashboard() {
   // ===============================
   // OPEN EDIT FORM
   // ===============================
+
   const handleEdit = (event) => {
     setEditingEvent({
       event_id: event.event_id,
@@ -145,8 +204,18 @@ function CoordinatorDashboard() {
   // ===============================
   // UPDATE EVENT
   // ===============================
+
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
+
+    const coordinatorId = getCoordinatorId();
+
+    if (!coordinatorId) {
+      alert(
+        "Coordinator information not found. Please login again."
+      );
+      return;
+    }
 
     if (
       !editingEvent.title ||
@@ -167,9 +236,14 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            coordinator_id: Number(
+              coordinatorId
+            ),
             title: editingEvent.title,
-            description: editingEvent.description,
-            event_date: editingEvent.event_date,
+            description:
+              editingEvent.description,
+            event_date:
+              editingEvent.event_date,
             venue: editingEvent.venue,
           }),
         }
@@ -177,7 +251,10 @@ function CoordinatorDashboard() {
 
       const data = await response.json();
 
-      alert(data.message);
+      alert(
+        data.message ||
+          "Event update completed."
+      );
 
       if (response.ok) {
         setEditingEvent(null);
@@ -186,6 +263,7 @@ function CoordinatorDashboard() {
       }
     } catch (error) {
       console.log(error);
+
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
@@ -195,6 +273,7 @@ function CoordinatorDashboard() {
   // ===============================
   // DELETE EVENT
   // ===============================
+
   const handleDelete = async (id) => {
     if (
       !window.confirm(
@@ -204,17 +283,37 @@ function CoordinatorDashboard() {
       return;
     }
 
+    const coordinatorId = getCoordinatorId();
+
+    if (!coordinatorId) {
+      alert(
+        "Coordinator information not found. Please login again."
+      );
+      return;
+    }
+
     try {
       const response = await fetch(
         `http://localhost:5000/delete-event/${id}`,
         {
           method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            coordinator_id: Number(
+              coordinatorId
+            ),
+          }),
         }
       );
 
       const data = await response.json();
 
-      alert(data.message);
+      alert(
+        data.message ||
+          "Delete operation completed."
+      );
 
       if (response.ok) {
         fetchEvents();
@@ -229,17 +328,23 @@ function CoordinatorDashboard() {
       }
     } catch (error) {
       console.log(error);
-      alert("Delete failed");
+
+      alert(
+        "Cannot connect to server. Make sure backend is running."
+      );
     }
   };
 
   // ===============================
   // FORMAT DATE
   // ===============================
+
   const formatDate = (date) => {
     if (!date) return "";
 
-    return new Date(date).toLocaleDateString();
+    return new Date(
+      date
+    ).toLocaleDateString();
   };
 
   return (
@@ -248,24 +353,40 @@ function CoordinatorDashboard() {
       {/* ===============================
           NAVBAR
       =============================== */}
+
       <nav className="navbar">
+
         <div className="logo">
           Campus Events
         </div>
 
         <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/events">Events</Link>
-          <Link to="/login">Logout</Link>
+
+          <Link to="/">
+            Home
+          </Link>
+
+          <Link to="/events">
+            Events
+          </Link>
+
+          <Link to="/logout">
+            Logout
+          </Link>
+
         </div>
+
       </nav>
 
       {/* ===============================
           DASHBOARD
       =============================== */}
+
       <div className="dashboard-container">
 
-        <h1>Club Coordinator Dashboard</h1>
+        <h1>
+          Club Coordinator Dashboard
+        </h1>
 
         <p>
           Manage your college events from one place.
@@ -274,8 +395,12 @@ function CoordinatorDashboard() {
         <div className="dashboard-grid">
 
           {/* CREATE EVENT */}
+
           <div className="dashboard-card">
-            <h2>Create Event</h2>
+
+            <h2>
+              Create Event
+            </h2>
 
             <p>
               Create and publish a new college event.
@@ -292,11 +417,16 @@ function CoordinatorDashboard() {
             >
               Create Event
             </button>
+
           </div>
 
           {/* MANAGE EVENTS */}
+
           <div className="dashboard-card">
-            <h2>Manage Events</h2>
+
+            <h2>
+              Manage Events
+            </h2>
 
             <p>
               Edit or delete your created events.
@@ -314,11 +444,16 @@ function CoordinatorDashboard() {
             >
               Manage Events
             </button>
+
           </div>
 
           {/* PARTICIPANTS */}
+
           <div className="dashboard-card">
-            <h2>Participants</h2>
+
+            <h2>
+              Participants
+            </h2>
 
             <p>
               View students registered for your events.
@@ -328,7 +463,9 @@ function CoordinatorDashboard() {
               className="dashboard-btn"
               onClick={() => {
                 fetchParticipants();
-                setShowParticipants(!showParticipants);
+                setShowParticipants(
+                  !showParticipants
+                );
                 setShowForm(false);
                 setShowManage(false);
                 setShowEditForm(false);
@@ -336,6 +473,7 @@ function CoordinatorDashboard() {
             >
               View Participants
             </button>
+
           </div>
 
         </div>
@@ -343,7 +481,9 @@ function CoordinatorDashboard() {
         {/* ===============================
             CREATE EVENT FORM
         =============================== */}
+
         {showForm && (
+
           <div
             className="auth-card"
             style={{
@@ -352,7 +492,10 @@ function CoordinatorDashboard() {
               maxWidth: "90%",
             }}
           >
-            <h2>Create New Event</h2>
+
+            <h2>
+              Create New Event
+            </h2>
 
             <form onSubmit={handleCreateEvent}>
 
@@ -386,13 +529,17 @@ function CoordinatorDashboard() {
               </button>
 
             </form>
+
           </div>
+
         )}
 
         {/* ===============================
             MANAGE EVENTS
         =============================== */}
+
         {showManage && (
+
           <div
             className="auth-card"
             style={{
@@ -401,9 +548,13 @@ function CoordinatorDashboard() {
               maxWidth: "95%",
             }}
           >
-            <h2>Manage Events</h2>
+
+            <h2>
+              Manage Events
+            </h2>
 
             {events.length > 0 ? (
+
               <table
                 style={{
                   width: "100%",
@@ -411,26 +562,51 @@ function CoordinatorDashboard() {
                   textAlign: "center",
                 }}
               >
+
                 <thead>
+
                   <tr>
-                    <th>Title</th>
-                    <th>Date</th>
-                    <th>Venue</th>
-                    <th>Status</th>
-                    <th>Action</th>
+
+                    <th>
+                      Title
+                    </th>
+
+                    <th>
+                      Date
+                    </th>
+
+                    <th>
+                      Venue
+                    </th>
+
+                    <th>
+                      Status
+                    </th>
+
+                    <th>
+                      Action
+                    </th>
+
                   </tr>
+
                 </thead>
 
                 <tbody>
+
                   {events.map((event) => (
-                    <tr key={event.event_id}>
+
+                    <tr
+                      key={event.event_id}
+                    >
 
                       <td>
                         {event.title}
                       </td>
 
                       <td>
-                        {formatDate(event.event_date)}
+                        {formatDate(
+                          event.event_date
+                        )}
                       </td>
 
                       <td>
@@ -444,6 +620,7 @@ function CoordinatorDashboard() {
                       <td>
 
                         {/* EDIT */}
+
                         <button
                           className="dashboard-btn"
                           onClick={() =>
@@ -454,6 +631,7 @@ function CoordinatorDashboard() {
                         </button>
 
                         {/* DELETE */}
+
                         <button
                           className="dashboard-btn"
                           style={{
@@ -471,21 +649,36 @@ function CoordinatorDashboard() {
                       </td>
 
                     </tr>
+
                   ))}
+
                 </tbody>
+
               </table>
+
             ) : (
-              <p style={{ textAlign: "center" }}>
+
+              <p
+                style={{
+                  textAlign: "center",
+                }}
+              >
                 No Events Found
               </p>
+
             )}
+
           </div>
+
         )}
 
         {/* ===============================
             EDIT EVENT FORM
         =============================== */}
-        {showEditForm && editingEvent && (
+
+        {showEditForm &&
+          editingEvent && (
+
           <div
             className="auth-card"
             style={{
@@ -494,7 +687,10 @@ function CoordinatorDashboard() {
               maxWidth: "90%",
             }}
           >
-            <h2>Edit Event</h2>
+
+            <h2>
+              Edit Event
+            </h2>
 
             <form onSubmit={handleUpdateEvent}>
 
@@ -512,22 +708,28 @@ function CoordinatorDashboard() {
 
               <textarea
                 placeholder="Event Description"
-                value={editingEvent.description}
+                value={
+                  editingEvent.description
+                }
                 onChange={(e) =>
                   setEditingEvent({
                     ...editingEvent,
-                    description: e.target.value,
+                    description:
+                      e.target.value,
                   })
                 }
               />
 
               <input
                 type="date"
-                value={editingEvent.event_date}
+                value={
+                  editingEvent.event_date
+                }
                 onChange={(e) =>
                   setEditingEvent({
                     ...editingEvent,
-                    event_date: e.target.value,
+                    event_date:
+                      e.target.value,
                   })
                 }
               />
@@ -566,13 +768,17 @@ function CoordinatorDashboard() {
               </button>
 
             </form>
+
           </div>
+
         )}
 
         {/* ===============================
             PARTICIPANTS
         =============================== */}
+
         {showParticipants && (
+
           <div
             className="auth-card"
             style={{
@@ -581,9 +787,13 @@ function CoordinatorDashboard() {
               maxWidth: "95%",
             }}
           >
-            <h2>Participants</h2>
+
+            <h2>
+              Participants
+            </h2>
 
             {participants.length > 0 ? (
+
               <table
                 style={{
                   width: "100%",
@@ -591,52 +801,82 @@ function CoordinatorDashboard() {
                   textAlign: "center",
                 }}
               >
+
                 <thead>
+
                   <tr>
-                    <th>Email</th>
-                    <th>Event</th>
-                    <th>Date</th>
-                    <th>Location</th>
+
+                    <th>
+                      Email
+                    </th>
+
+                    <th>
+                      Event
+                    </th>
+
+                    <th>
+                      Date
+                    </th>
+
+                    <th>
+                      Location
+                    </th>
+
                   </tr>
+
                 </thead>
 
                 <tbody>
+
                   {participants.map(
                     (p, index) => (
-                      <tr key={index}>
 
-                        <td>
-                          {p.student_email}
-                        </td>
+                    <tr key={index}>
 
-                        <td>
-                          {p.event_name}
-                        </td>
+                      <td>
+                        {p.student_email}
+                      </td>
 
-                        <td>
-                          {formatDate(
-                            p.event_date
-                          )}
-                        </td>
+                      <td>
+                        {p.event_name}
+                      </td>
 
-                        <td>
-                          {p.event_location}
-                        </td>
+                      <td>
+                        {formatDate(
+                          p.event_date
+                        )}
+                      </td>
 
-                      </tr>
-                    )
-                  )}
+                      <td>
+                        {p.event_location}
+                      </td>
+
+                    </tr>
+
+                  ))}
+
                 </tbody>
+
               </table>
+
             ) : (
-              <p style={{ textAlign: "center" }}>
+
+              <p
+                style={{
+                  textAlign: "center",
+                }}
+              >
                 No Participants Found
               </p>
+
             )}
+
           </div>
+
         )}
 
       </div>
+
     </div>
   );
 }

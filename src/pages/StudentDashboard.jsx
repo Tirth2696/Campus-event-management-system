@@ -22,13 +22,17 @@ function StudentDashboard() {
     const email = getStudentEmail();
 
     if (!email) {
-      alert("Student login information not found. Please login again.");
+      alert(
+        "Student login information not found. Please login again."
+      );
       return;
     }
 
     try {
       const response = await fetch(
-        `http://localhost:5000/my-registrations/${encodeURIComponent(email)}`
+        `http://localhost:5000/my-registrations/${encodeURIComponent(
+          email
+        )}`
       );
 
       const data = await response.json();
@@ -43,7 +47,10 @@ function StudentDashboard() {
       setShowCertificates(false);
     } catch (error) {
       console.log(error);
-      alert("Cannot connect to server. Make sure backend is running.");
+
+      alert(
+        "Cannot connect to server. Make sure backend is running."
+      );
     }
   };
 
@@ -52,13 +59,17 @@ function StudentDashboard() {
     const email = getStudentEmail();
 
     if (!email) {
-      alert("Student login information not found. Please login again.");
+      alert(
+        "Student login information not found. Please login again."
+      );
       return;
     }
 
     try {
       const response = await fetch(
-        `http://localhost:5000/my-certificates/${encodeURIComponent(email)}`
+        `http://localhost:5000/my-certificates/${encodeURIComponent(
+          email
+        )}`
       );
 
       const data = await response.json();
@@ -73,7 +84,10 @@ function StudentDashboard() {
       setShowRegistrations(false);
     } catch (error) {
       console.log(error);
-      alert("Cannot connect to server. Make sure backend is running.");
+
+      alert(
+        "Cannot connect to server. Make sure backend is running."
+      );
     }
   };
 
@@ -84,33 +98,59 @@ function StudentDashboard() {
       return;
     }
 
-    window.open("/certificates/" + fileName, "_blank");
+    window.open(
+      "/certificates/" + fileName,
+      "_blank"
+    );
   };
 
   return (
     <div>
       {/* ================= NAVBAR ================= */}
+
       <nav className="navbar">
-        <div className="logo">Campus Events</div>
+
+        <div className="logo">
+          Campus Events
+        </div>
 
         <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/events">Events</Link>
-          <Link to="/login">Logout</Link>
+
+          <Link to="/">
+            Home
+          </Link>
+
+          <Link to="/events">
+            Events
+          </Link>
+
+          {/* Proper Logout */}
+          <Link to="/logout">
+            Logout
+          </Link>
+
         </div>
+
       </nav>
 
       {/* ================= DASHBOARD ================= */}
+
       <div className="dashboard-container">
 
         {/* HEADER */}
+
         <div
           style={{
             textAlign: "center",
             marginBottom: "35px",
           }}
         >
-          <h1 style={{ marginBottom: "10px" }}>
+
+          <h1
+            style={{
+              marginBottom: "10px",
+            }}
+          >
             Student Dashboard
           </h1>
 
@@ -122,13 +162,17 @@ function StudentDashboard() {
           >
             Manage your events, registrations and certificates.
           </p>
+
         </div>
 
         {/* ================= DASHBOARD CARDS ================= */}
+
         <div className="dashboard-grid">
 
           {/* UPCOMING EVENTS */}
+
           <div className="dashboard-card">
+
             <div
               style={{
                 fontSize: "38px",
@@ -138,7 +182,9 @@ function StudentDashboard() {
               📅
             </div>
 
-            <h2>Upcoming Events</h2>
+            <h2>
+              Upcoming Events
+            </h2>
 
             <p>
               Explore upcoming college events and register
@@ -150,10 +196,13 @@ function StudentDashboard() {
                 View Events
               </button>
             </Link>
+
           </div>
 
           {/* MY REGISTRATIONS */}
+
           <div className="dashboard-card">
+
             <div
               style={{
                 fontSize: "38px",
@@ -163,7 +212,9 @@ function StudentDashboard() {
               📝
             </div>
 
-            <h2>My Registrations</h2>
+            <h2>
+              My Registrations
+            </h2>
 
             <p>
               View all events you have successfully
@@ -176,10 +227,13 @@ function StudentDashboard() {
             >
               View Registrations
             </button>
+
           </div>
 
           {/* MY CERTIFICATES */}
+
           <div className="dashboard-card">
+
             <div
               style={{
                 fontSize: "38px",
@@ -189,7 +243,9 @@ function StudentDashboard() {
               🏆
             </div>
 
-            <h2>My Certificates</h2>
+            <h2>
+              My Certificates
+            </h2>
 
             <p>
               View and access your event participation
@@ -202,10 +258,13 @@ function StudentDashboard() {
             >
               View Certificates
             </button>
+
           </div>
+
         </div>
 
         {/* ================= MY REGISTRATIONS ================= */}
+
         {showRegistrations && (
           <div
             className="auth-card"
@@ -218,6 +277,7 @@ function StudentDashboard() {
               padding: "25px",
             }}
           >
+
             <h2
               style={{
                 textAlign: "center",
@@ -228,7 +288,13 @@ function StudentDashboard() {
             </h2>
 
             {registrations.length > 0 ? (
-              <div style={{ overflowX: "auto" }}>
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
                 <table
                   style={{
                     width: "100%",
@@ -236,46 +302,83 @@ function StudentDashboard() {
                     textAlign: "center",
                   }}
                 >
+
                   <thead>
                     <tr>
-                      <th style={{ padding: "12px" }}>
+
+                      <th
+                        style={{
+                          padding: "12px",
+                        }}
+                      >
                         Event
                       </th>
 
-                      <th style={{ padding: "12px" }}>
+                      <th
+                        style={{
+                          padding: "12px",
+                        }}
+                      >
                         Date
                       </th>
 
-                      <th style={{ padding: "12px" }}>
+                      <th
+                        style={{
+                          padding: "12px",
+                        }}
+                      >
                         Location
                       </th>
+
                     </tr>
                   </thead>
 
                   <tbody>
+
                     {registrations.map(
                       (registration, index) => (
+
                         <tr key={index}>
-                          <td style={{ padding: "12px" }}>
+
+                          <td
+                            style={{
+                              padding: "12px",
+                            }}
+                          >
                             {registration.event_name}
                           </td>
 
-                          <td style={{ padding: "12px" }}>
+                          <td
+                            style={{
+                              padding: "12px",
+                            }}
+                          >
                             {new Date(
                               registration.event_date
                             ).toLocaleDateString()}
                           </td>
 
-                          <td style={{ padding: "12px" }}>
+                          <td
+                            style={{
+                              padding: "12px",
+                            }}
+                          >
                             {registration.event_location}
                           </td>
+
                         </tr>
+
                       )
                     )}
+
                   </tbody>
+
                 </table>
+
               </div>
+
             ) : (
+
               <p
                 style={{
                   textAlign: "center",
@@ -284,11 +387,14 @@ function StudentDashboard() {
               >
                 You have not registered for any events yet.
               </p>
+
             )}
+
           </div>
         )}
 
         {/* ================= MY CERTIFICATES ================= */}
+
         {showCertificates && (
           <div
             className="auth-card"
@@ -301,6 +407,7 @@ function StudentDashboard() {
               padding: "25px",
             }}
           >
+
             <h2
               style={{
                 textAlign: "center",
@@ -311,7 +418,13 @@ function StudentDashboard() {
             </h2>
 
             {certificates.length > 0 ? (
-              <div style={{ overflowX: "auto" }}>
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
                 <table
                   style={{
                     width: "100%",
@@ -319,28 +432,53 @@ function StudentDashboard() {
                     textAlign: "center",
                   }}
                 >
+
                   <thead>
+
                     <tr>
-                      <th style={{ padding: "12px" }}>
+
+                      <th
+                        style={{
+                          padding: "12px",
+                        }}
+                      >
                         Event
                       </th>
 
-                      <th style={{ padding: "12px" }}>
+                      <th
+                        style={{
+                          padding: "12px",
+                        }}
+                      >
                         Certificate
                       </th>
+
                     </tr>
+
                   </thead>
 
                   <tbody>
+
                     {certificates.map((certificate) => (
+
                       <tr
                         key={certificate.certificate_id}
                       >
-                        <td style={{ padding: "12px" }}>
+
+                        <td
+                          style={{
+                            padding: "12px",
+                          }}
+                        >
                           {certificate.event_name}
                         </td>
 
-                        <td style={{ padding: "12px" }}>
+                        <td
+                          style={{
+                            padding: "12px",
+                          }}
+                        >
+
                           <button
                             className="dashboard-btn"
                             onClick={() =>
@@ -351,13 +489,21 @@ function StudentDashboard() {
                           >
                             View Certificate
                           </button>
+
                         </td>
+
                       </tr>
+
                     ))}
+
                   </tbody>
+
                 </table>
+
               </div>
+
             ) : (
+
               <p
                 style={{
                   textAlign: "center",
@@ -366,10 +512,14 @@ function StudentDashboard() {
               >
                 No Certificates Found
               </p>
+
             )}
+
           </div>
         )}
+
       </div>
+
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import "../App.css";
 
 function Events() {
@@ -14,7 +15,9 @@ function Events() {
       })
       .catch((error) => {
         console.log(error);
-        alert("Cannot connect to server. Make sure backend is running.");
+        alert(
+          "Cannot connect to server. Make sure backend is running."
+        );
       });
   }, []);
 
@@ -24,7 +27,9 @@ function Events() {
       localStorage.getItem("email");
 
     if (!student_email) {
-      alert("Student login information not found. Please login again.");
+      alert(
+        "Student login information not found. Please login again."
+      );
       return;
     }
 
@@ -48,131 +53,178 @@ function Events() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message || "Event registered successfully!");
+        alert(
+          data.message || "Event registered successfully!"
+        );
       } else {
         alert(data.message || "Registration failed.");
       }
     } catch (error) {
       console.log(error);
-      alert("Cannot connect to server. Make sure backend is running.");
+
+      alert(
+        "Cannot connect to server. Make sure backend is running."
+      );
     }
   };
 
   // SEARCH + STATUS FILTER
   const filteredEvents = events.filter((event) => {
     const matchesSearch =
-      event.title.toLowerCase().includes(search.toLowerCase()) ||
-      event.description.toLowerCase().includes(search.toLowerCase()) ||
-      event.venue.toLowerCase().includes(search.toLowerCase());
+      event.title
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      event.description
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      event.venue
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
     const matchesStatus =
       filterStatus === "All" ||
-      event.status.toLowerCase() === filterStatus.toLowerCase();
+      event.status.toLowerCase() ===
+        filterStatus.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
 
   return (
-    <div>
-      <nav className="navbar">
-        <div className="logo">Campus Events</div>
+    <div className="events-page">
+
+      {/* Navigation */}
+      <nav className="navbar events-navbar">
+        <div className="brand-area">
+          <div className="brand-logo">C</div>
+
+          <div className="brand-text">
+            <h2>CHARUSAT</h2>
+            <span>Campus Event Management</span>
+          </div>
+        </div>
 
         <div className="nav-links">
-          <a href="/">Home</a>
-          <a href="/student-dashboard">Dashboard</a>
-          <a href="/login">Logout</a>
+          <Link to="/">Home</Link>
+          <Link to="/student-dashboard">Dashboard</Link>
+          <Link to="/login">Logout</Link>
         </div>
       </nav>
 
-      <div className="dashboard-container">
-        <h1>Upcoming Events</h1>
+      {/* Main Content */}
+      <div className="events-container">
 
-        <p>Explore and register for upcoming college events.</p>
+        <div className="events-header">
+          <div className="hero-top-label">
+            <span></span>
+            <p>Campus Events</p>
+            <span></span>
+          </div>
 
-        {/* SEARCH AND FILTER */}
-        <div
-          style={{
-            margin: "20px 0",
-            display: "flex",
-            gap: "10px",
-            justifyContent: "center",
-            flexWrap: "wrap",
-          }}
-        >
+          <h1>Upcoming Events</h1>
+
+          <p>
+            Explore and register for upcoming college events.
+          </p>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="events-controls">
+
           <input
             type="text"
             placeholder="Search events..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{
-              padding: "10px",
-              width: "300px",
-              borderRadius: "6px",
-              border: "1px solid #ccc",
-            }}
           />
 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            style={{
-              padding: "10px",
-              borderRadius: "6px",
-              border: "1px solid #ccc",
-            }}
           >
             <option value="All">All Events</option>
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
             <option value="Pending">Pending</option>
           </select>
+
         </div>
 
-        <div className="dashboard-grid">
+        {/* Event Cards */}
+        <div className="events-grid">
+
           {filteredEvents.length > 0 ? (
             filteredEvents.map((event) => (
               <div
-                className="dashboard-card"
+                className="event-card"
                 key={event.event_id}
               >
+                <div className="event-card-top">
+                  <span className="event-badge">
+                    {event.status}
+                  </span>
+                </div>
+
                 <h2>{event.title}</h2>
 
-                <p>
-                  <b>Description:</b> {event.description}
+                <p className="event-description">
+                  {event.description}
                 </p>
 
-                <p>
-                  <b>Date:</b>{" "}
-                  {new Date(event.event_date).toLocaleString()}
-                </p>
+                <div className="event-details">
 
-                <p>
-                  <b>Venue:</b> {event.venue}
-                </p>
+                  <p>
+                    <strong>Date</strong>
+                    <span>
+                      {new Date(
+                        event.event_date
+                      ).toLocaleString()}
+                    </span>
+                  </p>
 
-                <p>
-                  <b>Status:</b> {event.status}
-                </p>
+                  <p>
+                    <strong>Venue</strong>
+                    <span>{event.venue}</span>
+                  </p>
 
-                {event.status.toLowerCase() === "approved" ? (
+                </div>
+
+                {event.status.toLowerCase() ===
+                "approved" ? (
                   <button
-                    className="dashboard-btn"
-                    onClick={() => handleRegister(event)}
+                    className="event-register-btn"
+                    onClick={() =>
+                      handleRegister(event)
+                    }
                   >
                     Register for Event
                   </button>
                 ) : (
-                  <p>
-                    <b>Registration unavailable</b>
-                  </p>
+                  <div className="unavailable">
+                    Registration unavailable
+                  </div>
                 )}
               </div>
             ))
           ) : (
-            <p>No matching events found.</p>
+            <div className="no-events">
+              <h3>No matching events found.</h3>
+              <p>
+                Try changing your search or filter.
+              </p>
+            </div>
           )}
+
         </div>
+
       </div>
+
+      {/* Footer */}
+      <footer className="home-footer">
+        <p>
+          CHARUSAT • Campus Event Management System
+        </p>
+      </footer>
+
     </div>
   );
 }
