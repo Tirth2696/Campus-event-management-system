@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "../App.css";
 
 function AdminDashboard() {
@@ -13,10 +13,28 @@ function AdminDashboard() {
   const [showReports, setShowReports] = useState(false);
 
   // ===============================
+  // SEARCH & FILTER STATES
+  // ===============================
+
+  const [eventSearch, setEventSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("All");
+
+  // ===============================
+  // LOADING STATES
+  // ===============================
+
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  // ===============================
   // FETCH PENDING EVENTS
   // ===============================
 
   const fetchEvents = async () => {
+    setLoadingEvents(true);
+
     try {
       const response = await fetch(
         "http://localhost:5000/admin/events"
@@ -25,7 +43,9 @@ function AdminDashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to fetch events");
+        alert(
+          data.message || "Failed to fetch events"
+        );
         return;
       }
 
@@ -39,6 +59,8 @@ function AdminDashboard() {
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -46,7 +68,10 @@ function AdminDashboard() {
   // APPROVE / REJECT EVENT
   // ===============================
 
-  const updateEventStatus = async (eventId, status) => {
+  const updateEventStatus = async (
+    eventId,
+    status
+  ) => {
     try {
       const response = await fetch(
         `http://localhost:5000/admin/events/${eventId}/status`,
@@ -64,12 +89,20 @@ function AdminDashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to update event");
+        alert(
+          data.message ||
+            "Failed to update event"
+        );
         return;
       }
 
       alert(data.message);
+
+      // Refresh pending events
       fetchEvents();
+
+      // Refresh summary stats
+      fetchReports(false);
     } catch (error) {
       console.log(error);
 
@@ -84,6 +117,8 @@ function AdminDashboard() {
   // ===============================
 
   const fetchUsers = async () => {
+    setLoadingUsers(true);
+
     try {
       const response = await fetch(
         "http://localhost:5000/admin/users"
@@ -92,7 +127,9 @@ function AdminDashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to fetch users");
+        alert(
+          data.message || "Failed to fetch users"
+        );
         return;
       }
 
@@ -106,6 +143,8 @@ function AdminDashboard() {
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -113,7 +152,11 @@ function AdminDashboard() {
   // FETCH REPORTS
   // ===============================
 
-  const fetchReports = async () => {
+  const fetchReports = async (
+    showSection = true
+  ) => {
+    setLoadingReports(true);
+
     try {
       const response = await fetch(
         "http://localhost:5000/admin/reports"
@@ -122,27 +165,90 @@ function AdminDashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to fetch reports");
+        alert(
+          data.message || "Failed to fetch reports"
+        );
         return;
       }
 
       setReports(data);
-      setShowReports(true);
-      setShowEvents(false);
-      setShowUsers(false);
+
+      if (showSection) {
+        setShowReports(true);
+        setShowEvents(false);
+        setShowUsers(false);
+      }
     } catch (error) {
       console.log(error);
 
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setLoadingReports(false);
     }
   };
+
+  // ===============================
+  // LOAD REPORT DATA
+  // ===============================
+
+  useEffect(() => {
+    fetchReports(false);
+  }, []);
+
+  // ===============================
+  // FILTER EVENTS
+  // ===============================
+
+  const filteredEvents = events.filter((event) => {
+    const search = eventSearch
+      .trim()
+      .toLowerCase();
+
+    if (!search) {
+      return true;
+    }
+
+    return (
+      event.title?.toLowerCase().includes(search) ||
+      event.description
+        ?.toLowerCase()
+        .includes(search) ||
+      event.venue
+        ?.toLowerCase()
+        .includes(search)
+    );
+  });
+
+  // ===============================
+  // FILTER USERS
+  // ===============================
+
+  const filteredUsers = users.filter((user) => {
+    const search = userSearch
+      .trim()
+      .toLowerCase();
+
+    const matchesSearch =
+      !search ||
+      user.name?.toLowerCase().includes(search) ||
+      user.email?.toLowerCase().includes(search);
+
+    const matchesRole =
+      userRoleFilter === "All" ||
+      user.role?.toLowerCase() ===
+        userRoleFilter.toLowerCase();
+
+    return matchesSearch && matchesRole;
+  });
 
   return (
     <div>
 
-      {/* NAVBAR */}
+      {/* =========================
+          NAVBAR
+      ========================= */}
 
       <nav className="navbar">
 
@@ -160,7 +266,6 @@ function AdminDashboard() {
             Events
           </Link>
 
-          {/* Proper Logout */}
           <Link to="/logout">
             Logout
           </Link>
@@ -169,7 +274,9 @@ function AdminDashboard() {
 
       </nav>
 
-      {/* DASHBOARD */}
+      {/* =========================
+          DASHBOARD
+      ========================= */}
 
       <div className="dashboard-container">
 
@@ -180,6 +287,146 @@ function AdminDashboard() {
         <p>
           Monitor and manage the complete campus event system.
         </p>
+
+        {/* =========================
+            SUMMARY STATS
+        ========================= */}
+
+        {loadingReports && !reports ? (
+
+          <p
+            style={{
+              textAlign: "center",
+              padding: "20px",
+            }}
+          >
+            ⏳ Loading dashboard statistics...
+          </p>
+
+        ) : reports ? (
+
+          <div
+            className="dashboard-grid"
+            style={{
+              marginBottom: "35px",
+            }}
+          >
+
+            {/* TOTAL USERS */}
+
+            <div className="dashboard-card">
+
+              <div
+                style={{
+                  fontSize: "34px",
+                  marginBottom: "8px",
+                }}
+              >
+                👥
+              </div>
+
+              <h2>
+                Total Users
+              </h2>
+
+              <h1>
+                {reports.totalUsers}
+              </h1>
+
+              <p>
+                Registered users
+              </p>
+
+            </div>
+
+            {/* TOTAL EVENTS */}
+
+            <div className="dashboard-card">
+
+              <div
+                style={{
+                  fontSize: "34px",
+                  marginBottom: "8px",
+                }}
+              >
+                📅
+              </div>
+
+              <h2>
+                Total Events
+              </h2>
+
+              <h1>
+                {reports.totalEvents}
+              </h1>
+
+              <p>
+                Events created
+              </p>
+
+            </div>
+
+            {/* APPROVED EVENTS */}
+
+            <div className="dashboard-card">
+
+              <div
+                style={{
+                  fontSize: "34px",
+                  marginBottom: "8px",
+                }}
+              >
+                ✅
+              </div>
+
+              <h2>
+                Approved Events
+              </h2>
+
+              <h1>
+                {reports.approvedEvents}
+              </h1>
+
+              <p>
+                Events approved by admin
+              </p>
+
+            </div>
+
+            {/* PENDING EVENTS */}
+
+            <div className="dashboard-card">
+
+              <div
+                style={{
+                  fontSize: "34px",
+                  marginBottom: "8px",
+                }}
+              >
+                ⏳
+              </div>
+
+              <h2>
+                Pending Events
+              </h2>
+
+              <h1>
+                {reports.pendingEvents}
+              </h1>
+
+              <p>
+                Events waiting for approval
+              </p>
+
+            </div>
+
+          </div>
+
+        ) : null}
+
+        {/* =========================
+            ACTION CARDS
+        ========================= */}
 
         <div className="dashboard-grid">
 
@@ -197,7 +444,10 @@ function AdminDashboard() {
 
             <button
               className="dashboard-btn"
-              onClick={fetchEvents}
+              onClick={() => {
+                setEventSearch("");
+                fetchEvents();
+              }}
             >
               Review Events
             </button>
@@ -218,7 +468,11 @@ function AdminDashboard() {
 
             <button
               className="dashboard-btn"
-              onClick={fetchUsers}
+              onClick={() => {
+                setUserSearch("");
+                setUserRoleFilter("All");
+                fetchUsers();
+              }}
             >
               Manage Users
             </button>
@@ -239,7 +493,7 @@ function AdminDashboard() {
 
             <button
               className="dashboard-btn"
-              onClick={fetchReports}
+              onClick={() => fetchReports(true)}
             >
               View Reports
             </button>
@@ -248,9 +502,9 @@ function AdminDashboard() {
 
         </div>
 
-        {/* ===============================
+        {/* =========================
             PENDING EVENTS
-        =============================== */}
+        ========================= */}
 
         {showEvents && (
 
@@ -267,124 +521,198 @@ function AdminDashboard() {
               Pending Events
             </h2>
 
-            {events.length > 0 ? (
+            {/* EVENT SEARCH */}
 
-              <table
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginBottom: "20px",
+                flexWrap: "wrap",
+              }}
+            >
+
+              <input
+                type="text"
+                placeholder="Search by title, description or venue"
+                value={eventSearch}
+                onChange={(e) =>
+                  setEventSearch(e.target.value)
+                }
                 style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "center",
+                  flex: 1,
+                  minWidth: "250px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
                 }}
+              />
+
+              <button
+                className="dashboard-btn"
+                onClick={() =>
+                  setEventSearch("")
+                }
               >
+                Clear
+              </button>
 
-                <thead>
+            </div>
 
-                  <tr>
-
-                    <th>
-                      Title
-                    </th>
-
-                    <th>
-                      Description
-                    </th>
-
-                    <th>
-                      Date
-                    </th>
-
-                    <th>
-                      Venue
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-
-                    <th>
-                      Action
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {events.map((event) => (
-
-                    <tr key={event.event_id}>
-
-                      <td>
-                        {event.title}
-                      </td>
-
-                      <td>
-                        {event.description}
-                      </td>
-
-                      <td>
-                        {new Date(
-                          event.event_date
-                        ).toLocaleDateString()}
-                      </td>
-
-                      <td>
-                        {event.venue}
-                      </td>
-
-                      <td>
-                        {event.status}
-                      </td>
-
-                      <td>
-
-                        <button
-                          className="dashboard-btn"
-                          onClick={() =>
-                            updateEventStatus(
-                              event.event_id,
-                              "Approved"
-                            )
-                          }
-                        >
-                          Approve
-                        </button>
-
-                        <button
-                          className="dashboard-btn"
-                          style={{
-                            marginLeft: "8px",
-                          }}
-                          onClick={() =>
-                            updateEventStatus(
-                              event.event_id,
-                              "Rejected"
-                            )
-                          }
-                        >
-                          Reject
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            ) : (
+            {loadingEvents ? (
 
               <p
                 style={{
                   textAlign: "center",
+                  padding: "20px",
                 }}
               >
-                No Pending Events Found
+                ⏳ Loading events...
               </p>
+
+            ) : filteredEvents.length > 0 ? (
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "center",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Title
+                      </th>
+
+                      <th>
+                        Description
+                      </th>
+
+                      <th>
+                        Date
+                      </th>
+
+                      <th>
+                        Venue
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                      <th>
+                        Action
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {filteredEvents.map(
+                      (event) => (
+
+                        <tr
+                          key={event.event_id}
+                        >
+
+                          <td>
+                            {event.title}
+                          </td>
+
+                          <td>
+                            {event.description}
+                          </td>
+
+                          <td>
+                            {new Date(
+                              event.event_date
+                            ).toLocaleDateString()}
+                          </td>
+
+                          <td>
+                            {event.venue}
+                          </td>
+
+                          <td>
+                            {event.status}
+                          </td>
+
+                          <td>
+
+                            <button
+                              className="dashboard-btn"
+                              onClick={() =>
+                                updateEventStatus(
+                                  event.event_id,
+                                  "Approved"
+                                )
+                              }
+                            >
+                              Approve
+                            </button>
+
+                            <button
+                              className="dashboard-btn"
+                              style={{
+                                marginLeft: "8px",
+                              }}
+                              onClick={() =>
+                                updateEventStatus(
+                                  event.event_id,
+                                  "Rejected"
+                                )
+                              }
+                            >
+                              Reject
+                            </button>
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "25px",
+                }}
+              >
+
+                <h3>
+                  {events.length > 0
+                    ? "No Events Match Your Search"
+                    : "No Pending Events Found"}
+                </h3>
+
+                <p>
+                  {events.length > 0
+                    ? "Try a different title, description or venue."
+                    : "There are currently no events waiting for admin approval."}
+                </p>
+
+              </div>
 
             )}
 
@@ -392,9 +720,9 @@ function AdminDashboard() {
 
         )}
 
-        {/* ===============================
+        {/* =========================
             MANAGE USERS
-        =============================== */}
+        ========================= */}
 
         {showUsers && (
 
@@ -411,79 +739,184 @@ function AdminDashboard() {
               Manage Users
             </h2>
 
-            {users.length > 0 ? (
+            {/* USER SEARCH AND ROLE FILTER */}
 
-              <table
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                marginBottom: "20px",
+                flexWrap: "wrap",
+              }}
+            >
+
+              <input
+                type="text"
+                placeholder="Search by name or email"
+                value={userSearch}
+                onChange={(e) =>
+                  setUserSearch(e.target.value)
+                }
                 style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "center",
+                  flex: 1,
+                  minWidth: "250px",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
+                }}
+              />
+
+              <select
+                value={userRoleFilter}
+                onChange={(e) =>
+                  setUserRoleFilter(e.target.value)
+                }
+                style={{
+                  padding: "12px",
+                  borderRadius: "8px",
+                  border: "1px solid #ccc",
                 }}
               >
 
-                <thead>
+                <option value="All">
+                  All Roles
+                </option>
 
-                  <tr>
+                <option value="Student">
+                  Student
+                </option>
 
-                    <th>
-                      ID
-                    </th>
+                <option value="Coordinator">
+                  Coordinator
+                </option>
 
-                    <th>
-                      Name
-                    </th>
+                <option value="Admin">
+                  Admin
+                </option>
 
-                    <th>
-                      Email
-                    </th>
+              </select>
 
-                    <th>
-                      Role
-                    </th>
+              <button
+                className="dashboard-btn"
+                onClick={() => {
+                  setUserSearch("");
+                  setUserRoleFilter("All");
+                }}
+              >
+                Clear
+              </button>
 
-                  </tr>
+            </div>
 
-                </thead>
-
-                <tbody>
-
-                  {users.map((user) => (
-
-                    <tr key={user.user_id}>
-
-                      <td>
-                        {user.user_id}
-                      </td>
-
-                      <td>
-                        {user.name}
-                      </td>
-
-                      <td>
-                        {user.email}
-                      </td>
-
-                      <td>
-                        {user.role}
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            ) : (
+            {loadingUsers ? (
 
               <p
                 style={{
                   textAlign: "center",
+                  padding: "20px",
                 }}
               >
-                No Users Found
+                ⏳ Loading users...
               </p>
+
+            ) : filteredUsers.length > 0 ? (
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "center",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        ID
+                      </th>
+
+                      <th>
+                        Name
+                      </th>
+
+                      <th>
+                        Email
+                      </th>
+
+                      <th>
+                        Role
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {filteredUsers.map(
+                      (user) => (
+
+                        <tr
+                          key={user.user_id}
+                        >
+
+                          <td>
+                            {user.user_id}
+                          </td>
+
+                          <td>
+                            {user.name}
+                          </td>
+
+                          <td>
+                            {user.email}
+                          </td>
+
+                          <td>
+                            {user.role}
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "25px",
+                }}
+              >
+
+                <h3>
+                  {users.length > 0
+                    ? "No Users Match Your Search or Filter"
+                    : "No Users Found"}
+                </h3>
+
+                <p>
+                  {users.length > 0
+                    ? "Try another name, email or role."
+                    : "No users are available in the system."}
+                </p>
+
+              </div>
 
             )}
 
@@ -491,11 +924,11 @@ function AdminDashboard() {
 
         )}
 
-        {/* ===============================
+        {/* =========================
             REPORTS
-        =============================== */}
+        ========================= */}
 
-        {showReports && reports && (
+        {showReports && (
 
           <div
             className="auth-card"
@@ -510,117 +943,143 @@ function AdminDashboard() {
               System Reports
             </h2>
 
-            <div className="dashboard-grid">
+            {loadingReports ? (
 
-              {/* TOTAL USERS */}
+              <p
+                style={{
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                ⏳ Loading reports...
+              </p>
 
-              <div className="dashboard-card">
+            ) : reports ? (
 
-                <h2>
-                  Total Users
-                </h2>
+              <div className="dashboard-grid">
 
-                <h1>
-                  {reports.totalUsers}
-                </h1>
+                {/* TOTAL USERS */}
 
-                <p>
-                  Registered users
-                </p>
+                <div className="dashboard-card">
+
+                  <h2>
+                    Total Users
+                  </h2>
+
+                  <h1>
+                    {reports.totalUsers}
+                  </h1>
+
+                  <p>
+                    Registered users
+                  </p>
+
+                </div>
+
+                {/* TOTAL EVENTS */}
+
+                <div className="dashboard-card">
+
+                  <h2>
+                    Total Events
+                  </h2>
+
+                  <h1>
+                    {reports.totalEvents}
+                  </h1>
+
+                  <p>
+                    Events created
+                  </p>
+
+                </div>
+
+                {/* APPROVED */}
+
+                <div className="dashboard-card">
+
+                  <h2>
+                    Approved Events
+                  </h2>
+
+                  <h1>
+                    {reports.approvedEvents}
+                  </h1>
+
+                  <p>
+                    Approved by admin
+                  </p>
+
+                </div>
+
+                {/* REJECTED */}
+
+                <div className="dashboard-card">
+
+                  <h2>
+                    Rejected Events
+                  </h2>
+
+                  <h1>
+                    {reports.rejectedEvents}
+                  </h1>
+
+                  <p>
+                    Rejected by admin
+                  </p>
+
+                </div>
+
+                {/* PENDING */}
+
+                <div className="dashboard-card">
+
+                  <h2>
+                    Pending Events
+                  </h2>
+
+                  <h1>
+                    {reports.pendingEvents}
+                  </h1>
+
+                  <p>
+                    Waiting for approval
+                  </p>
+
+                </div>
+
+                {/* PARTICIPANTS */}
+
+                <div className="dashboard-card">
+
+                  <h2>
+                    Total Participants
+                  </h2>
+
+                  <h1>
+                    {reports.totalParticipants}
+                  </h1>
+
+                  <p>
+                    Event registrations
+                  </p>
+
+                </div>
 
               </div>
 
-              {/* TOTAL EVENTS */}
+            ) : (
 
-              <div className="dashboard-card">
+              <p
+                style={{
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                No report data available.
+              </p>
 
-                <h2>
-                  Total Events
-                </h2>
-
-                <h1>
-                  {reports.totalEvents}
-                </h1>
-
-                <p>
-                  Events created
-                </p>
-
-              </div>
-
-              {/* APPROVED */}
-
-              <div className="dashboard-card">
-
-                <h2>
-                  Approved Events
-                </h2>
-
-                <h1>
-                  {reports.approvedEvents}
-                </h1>
-
-                <p>
-                  Approved by admin
-                </p>
-
-              </div>
-
-              {/* REJECTED */}
-
-              <div className="dashboard-card">
-
-                <h2>
-                  Rejected Events
-                </h2>
-
-                <h1>
-                  {reports.rejectedEvents}
-                </h1>
-
-                <p>
-                  Rejected by admin
-                </p>
-
-              </div>
-
-              {/* PENDING */}
-
-              <div className="dashboard-card">
-
-                <h2>
-                  Pending Events
-                </h2>
-
-                <h1>
-                  {reports.pendingEvents}
-                </h1>
-
-                <p>
-                  Waiting for approval
-                </p>
-
-              </div>
-
-              {/* PARTICIPANTS */}
-
-              <div className="dashboard-card">
-
-                <h2>
-                  Total Participants
-                </h2>
-
-                <h1>
-                  {reports.totalParticipants}
-                </h1>
-
-                <p>
-                  Event registrations
-                </p>
-
-              </div>
-
-            </div>
+            )}
 
           </div>
 

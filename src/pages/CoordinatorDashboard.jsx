@@ -10,6 +10,9 @@ function CoordinatorDashboard() {
   const [events, setEvents] = useState([]);
   const [participants, setParticipants] = useState([]);
 
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+
   // EDIT EVENT
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -36,6 +39,8 @@ function CoordinatorDashboard() {
       return;
     }
 
+    setLoadingEvents(true);
+
     try {
       const response = await fetch(
         `http://localhost:5000/manage-events/coordinator/${coordinatorId}`
@@ -57,6 +62,8 @@ function CoordinatorDashboard() {
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -73,6 +80,8 @@ function CoordinatorDashboard() {
       );
       return;
     }
+
+    setLoadingParticipants(true);
 
     try {
       const response = await fetch(
@@ -96,16 +105,52 @@ function CoordinatorDashboard() {
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setLoadingParticipants(false);
     }
   };
 
   // ===============================
-  // LOAD EVENTS
+  // LOAD EVENTS + PARTICIPANTS
   // ===============================
 
   useEffect(() => {
     fetchEvents();
+    fetchParticipants();
   }, []);
+
+  // ===============================
+  // STATS
+  // ===============================
+
+  const totalEvents = events.length;
+
+  const approvedEvents = events.filter(
+    (event) =>
+      event.status &&
+      event.status.toLowerCase() === "approved"
+  ).length;
+
+  const pendingEvents = events.filter(
+    (event) =>
+      event.status &&
+      event.status.toLowerCase() === "pending"
+  ).length;
+
+  const totalParticipants = participants.length;
+
+  // ===============================
+  // EVENT-WISE PARTICIPANT COUNT
+  // ===============================
+
+  const getParticipantCount = (eventTitle) => {
+    return participants.filter(
+      (participant) =>
+        participant.event_name &&
+        participant.event_name.toLowerCase() ===
+          eventTitle.toLowerCase()
+    ).length;
+  };
 
   // ===============================
   // CREATE EVENT
@@ -148,9 +193,7 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(
-              coordinatorId
-            ),
+            coordinator_id: Number(coordinatorId),
             title: title,
             description: description,
             event_date: eventDate,
@@ -169,7 +212,9 @@ function CoordinatorDashboard() {
       if (response.ok) {
         e.target.reset();
         setShowForm(false);
+
         fetchEvents();
+        fetchParticipants();
       }
     } catch (error) {
       console.log(error);
@@ -236,9 +281,7 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(
-              coordinatorId
-            ),
+            coordinator_id: Number(coordinatorId),
             title: editingEvent.title,
             description:
               editingEvent.description,
@@ -259,7 +302,9 @@ function CoordinatorDashboard() {
       if (response.ok) {
         setEditingEvent(null);
         setShowEditForm(false);
+
         fetchEvents();
+        fetchParticipants();
       }
     } catch (error) {
       console.log(error);
@@ -317,6 +362,7 @@ function CoordinatorDashboard() {
 
       if (response.ok) {
         fetchEvents();
+        fetchParticipants();
 
         if (
           editingEvent &&
@@ -392,6 +438,133 @@ function CoordinatorDashboard() {
           Manage your college events from one place.
         </p>
 
+        {/* ===============================
+            SUMMARY STATS
+        =============================== */}
+
+        <div
+          className="dashboard-grid"
+          style={{
+            marginBottom: "35px",
+          }}
+        >
+
+          {/* TOTAL EVENTS */}
+
+          <div className="dashboard-card">
+
+            <div
+              style={{
+                fontSize: "34px",
+                marginBottom: "8px",
+              }}
+            >
+              📅
+            </div>
+
+            <h2>
+              Total Events
+            </h2>
+
+            <h1>
+              {loadingEvents ? "..." : totalEvents}
+            </h1>
+
+            <p>
+              Events created by you
+            </p>
+
+          </div>
+
+          {/* APPROVED EVENTS */}
+
+          <div className="dashboard-card">
+
+            <div
+              style={{
+                fontSize: "34px",
+                marginBottom: "8px",
+              }}
+            >
+              ✅
+            </div>
+
+            <h2>
+              Approved Events
+            </h2>
+
+            <h1>
+              {loadingEvents ? "..." : approvedEvents}
+            </h1>
+
+            <p>
+              Events approved by admin
+            </p>
+
+          </div>
+
+          {/* PENDING EVENTS */}
+
+          <div className="dashboard-card">
+
+            <div
+              style={{
+                fontSize: "34px",
+                marginBottom: "8px",
+              }}
+            >
+              ⏳
+            </div>
+
+            <h2>
+              Pending Events
+            </h2>
+
+            <h1>
+              {loadingEvents ? "..." : pendingEvents}
+            </h1>
+
+            <p>
+              Events waiting for approval
+            </p>
+
+          </div>
+
+          {/* TOTAL PARTICIPANTS */}
+
+          <div className="dashboard-card">
+
+            <div
+              style={{
+                fontSize: "34px",
+                marginBottom: "8px",
+              }}
+            >
+              👥
+            </div>
+
+            <h2>
+              Total Participants
+            </h2>
+
+            <h1>
+              {loadingParticipants
+                ? "..."
+                : totalParticipants}
+            </h1>
+
+            <p>
+              Students registered for your events
+            </p>
+
+          </div>
+
+        </div>
+
+        {/* ===============================
+            DASHBOARD ACTION CARDS
+        =============================== */}
+
         <div className="dashboard-grid">
 
           {/* CREATE EVENT */}
@@ -436,6 +609,8 @@ function CoordinatorDashboard() {
               className="dashboard-btn"
               onClick={() => {
                 fetchEvents();
+                fetchParticipants();
+
                 setShowManage(!showManage);
                 setShowForm(false);
                 setShowParticipants(false);
@@ -463,9 +638,11 @@ function CoordinatorDashboard() {
               className="dashboard-btn"
               onClick={() => {
                 fetchParticipants();
+
                 setShowParticipants(
                   !showParticipants
                 );
+
                 setShowForm(false);
                 setShowManage(false);
                 setShowEditForm(false);
@@ -544,7 +721,7 @@ function CoordinatorDashboard() {
             className="auth-card"
             style={{
               marginTop: "40px",
-              width: "1000px",
+              width: "1100px",
               maxWidth: "95%",
             }}
           >
@@ -553,118 +730,157 @@ function CoordinatorDashboard() {
               Manage Events
             </h2>
 
-            {events.length > 0 ? (
-
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "center",
-                }}
-              >
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      Title
-                    </th>
-
-                    <th>
-                      Date
-                    </th>
-
-                    <th>
-                      Venue
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-
-                    <th>
-                      Action
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {events.map((event) => (
-
-                    <tr
-                      key={event.event_id}
-                    >
-
-                      <td>
-                        {event.title}
-                      </td>
-
-                      <td>
-                        {formatDate(
-                          event.event_date
-                        )}
-                      </td>
-
-                      <td>
-                        {event.venue}
-                      </td>
-
-                      <td>
-                        {event.status}
-                      </td>
-
-                      <td>
-
-                        {/* EDIT */}
-
-                        <button
-                          className="dashboard-btn"
-                          onClick={() =>
-                            handleEdit(event)
-                          }
-                        >
-                          Edit
-                        </button>
-
-                        {/* DELETE */}
-
-                        <button
-                          className="dashboard-btn"
-                          style={{
-                            marginLeft: "8px",
-                          }}
-                          onClick={() =>
-                            handleDelete(
-                              event.event_id
-                            )
-                          }
-                        >
-                          Delete
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            ) : (
+            {loadingEvents ? (
 
               <p
                 style={{
                   textAlign: "center",
+                  padding: "20px",
                 }}
               >
-                No Events Found
+                ⏳ Loading events...
               </p>
+
+            ) : events.length > 0 ? (
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "center",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Title
+                      </th>
+
+                      <th>
+                        Date
+                      </th>
+
+                      <th>
+                        Venue
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                      <th>
+                        Participants
+                      </th>
+
+                      <th>
+                        Action
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {events.map((event) => (
+
+                      <tr
+                        key={event.event_id}
+                      >
+
+                        <td>
+                          {event.title}
+                        </td>
+
+                        <td>
+                          {formatDate(
+                            event.event_date
+                          )}
+                        </td>
+
+                        <td>
+                          {event.venue}
+                        </td>
+
+                        <td>
+                          {event.status}
+                        </td>
+
+                        <td>
+
+                          <strong>
+                            {getParticipantCount(
+                              event.title
+                            )}
+                          </strong>
+
+                        </td>
+
+                        <td>
+
+                          <button
+                            className="dashboard-btn"
+                            onClick={() =>
+                              handleEdit(event)
+                            }
+                          >
+                            Edit
+                          </button>
+
+                          <button
+                            className="dashboard-btn"
+                            style={{
+                              marginLeft: "8px",
+                            }}
+                            onClick={() =>
+                              handleDelete(
+                                event.event_id
+                              )
+                            }
+                          >
+                            Delete
+                          </button>
+
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "25px",
+                }}
+              >
+
+                <h3>
+                  No Events Found
+                </h3>
+
+                <p>
+                  You have not created any events yet.
+                  Create an event to see it here.
+                </p>
+
+              </div>
 
             )}
 
@@ -679,99 +895,105 @@ function CoordinatorDashboard() {
         {showEditForm &&
           editingEvent && (
 
-          <div
-            className="auth-card"
-            style={{
-              marginTop: "40px",
-              width: "600px",
-              maxWidth: "90%",
-            }}
-          >
+            <div
+              className="auth-card"
+              style={{
+                marginTop: "40px",
+                width: "600px",
+                maxWidth: "90%",
+              }}
+            >
 
-            <h2>
-              Edit Event
-            </h2>
+              <h2>
+                Edit Event
+              </h2>
 
-            <form onSubmit={handleUpdateEvent}>
+              <form onSubmit={handleUpdateEvent}>
 
-              <input
-                type="text"
-                placeholder="Event Title"
-                value={editingEvent.title}
-                onChange={(e) =>
-                  setEditingEvent({
-                    ...editingEvent,
-                    title: e.target.value,
-                  })
-                }
-              />
+                <input
+                  type="text"
+                  placeholder="Event Title"
+                  value={
+                    editingEvent.title
+                  }
+                  onChange={(e) =>
+                    setEditingEvent({
+                      ...editingEvent,
+                      title:
+                        e.target.value,
+                    })
+                  }
+                />
 
-              <textarea
-                placeholder="Event Description"
-                value={
-                  editingEvent.description
-                }
-                onChange={(e) =>
-                  setEditingEvent({
-                    ...editingEvent,
-                    description:
-                      e.target.value,
-                  })
-                }
-              />
+                <textarea
+                  placeholder="Event Description"
+                  value={
+                    editingEvent.description
+                  }
+                  onChange={(e) =>
+                    setEditingEvent({
+                      ...editingEvent,
+                      description:
+                        e.target.value,
+                    })
+                  }
+                />
 
-              <input
-                type="date"
-                value={
-                  editingEvent.event_date
-                }
-                onChange={(e) =>
-                  setEditingEvent({
-                    ...editingEvent,
-                    event_date:
-                      e.target.value,
-                  })
-                }
-              />
+                <input
+                  type="date"
+                  value={
+                    editingEvent.event_date
+                  }
+                  onChange={(e) =>
+                    setEditingEvent({
+                      ...editingEvent,
+                      event_date:
+                        e.target.value,
+                    })
+                  }
+                />
 
-              <input
-                type="text"
-                placeholder="Venue"
-                value={editingEvent.venue}
-                onChange={(e) =>
-                  setEditingEvent({
-                    ...editingEvent,
-                    venue: e.target.value,
-                  })
-                }
-              />
+                <input
+                  type="text"
+                  placeholder="Venue"
+                  value={
+                    editingEvent.venue
+                  }
+                  onChange={(e) =>
+                    setEditingEvent({
+                      ...editingEvent,
+                      venue:
+                        e.target.value,
+                    })
+                  }
+                />
 
-              <button
-                type="submit"
-                className="dashboard-btn"
-              >
-                Update Event
-              </button>
+                <button
+                  type="submit"
+                  className="dashboard-btn"
+                >
+                  Update Event
+                </button>
 
-              <button
-                type="button"
-                className="dashboard-btn"
-                style={{
-                  marginLeft: "10px",
-                }}
-                onClick={() => {
-                  setShowEditForm(false);
-                  setEditingEvent(null);
-                }}
-              >
-                Cancel
-              </button>
+                <button
+                  type="button"
+                  className="dashboard-btn"
+                  style={{
+                    marginLeft: "10px",
+                  }}
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingEvent(null);
+                  }}
+                >
+                  Cancel
+                </button>
 
-            </form>
+              </form>
 
-          </div>
+            </div>
 
-        )}
+          )}
 
         {/* ===============================
             PARTICIPANTS
@@ -792,82 +1014,112 @@ function CoordinatorDashboard() {
               Participants
             </h2>
 
-            {participants.length > 0 ? (
-
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "center",
-                }}
-              >
-
-                <thead>
-
-                  <tr>
-
-                    <th>
-                      Email
-                    </th>
-
-                    <th>
-                      Event
-                    </th>
-
-                    <th>
-                      Date
-                    </th>
-
-                    <th>
-                      Location
-                    </th>
-
-                  </tr>
-
-                </thead>
-
-                <tbody>
-
-                  {participants.map(
-                    (p, index) => (
-
-                    <tr key={index}>
-
-                      <td>
-                        {p.student_email}
-                      </td>
-
-                      <td>
-                        {p.event_name}
-                      </td>
-
-                      <td>
-                        {formatDate(
-                          p.event_date
-                        )}
-                      </td>
-
-                      <td>
-                        {p.event_location}
-                      </td>
-
-                    </tr>
-
-                  ))}
-
-                </tbody>
-
-              </table>
-
-            ) : (
+            {loadingParticipants ? (
 
               <p
                 style={{
                   textAlign: "center",
+                  padding: "20px",
                 }}
               >
-                No Participants Found
+                ⏳ Loading participants...
               </p>
+
+            ) : participants.length > 0 ? (
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "center",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Email
+                      </th>
+
+                      <th>
+                        Event
+                      </th>
+
+                      <th>
+                        Date
+                      </th>
+
+                      <th>
+                        Location
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {participants.map(
+                      (p, index) => (
+
+                        <tr key={index}>
+
+                          <td>
+                            {p.student_email}
+                          </td>
+
+                          <td>
+                            {p.event_name}
+                          </td>
+
+                          <td>
+                            {formatDate(
+                              p.event_date
+                            )}
+                          </td>
+
+                          <td>
+                            {p.event_location}
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "25px",
+                }}
+              >
+
+                <h3>
+                  No Participants Found
+                </h3>
+
+                <p>
+                  No students are currently registered
+                  for your events.
+                </p>
+
+              </div>
 
             )}
 
