@@ -12,21 +12,23 @@ function AdminDashboard() {
   const [reports, setReports] = useState(null);
   const [showReports, setShowReports] = useState(false);
 
-  // ===============================
-  // SEARCH & FILTER STATES
-  // ===============================
+  // EVENT-WISE PARTICIPANT REPORT
+  const [eventParticipantReport, setEventParticipantReport] =
+    useState([]);
+  const [showEventParticipantReport, setShowEventParticipantReport] =
+    useState(false);
 
+  // SEARCH & FILTER STATES
   const [eventSearch, setEventSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("All");
 
-  // ===============================
   // LOADING STATES
-  // ===============================
-
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingReports, setLoadingReports] = useState(false);
+  const [loadingEventParticipantReport, setLoadingEventParticipantReport] =
+    useState(false);
 
   // ===============================
   // FETCH PENDING EVENTS
@@ -53,6 +55,7 @@ function AdminDashboard() {
       setShowEvents(true);
       setShowUsers(false);
       setShowReports(false);
+      setShowEventParticipantReport(false);
     } catch (error) {
       console.log(error);
 
@@ -103,6 +106,9 @@ function AdminDashboard() {
 
       // Refresh summary stats
       fetchReports(false);
+
+      // Refresh event participant report
+      fetchEventParticipantReport(false);
     } catch (error) {
       console.log(error);
 
@@ -137,6 +143,7 @@ function AdminDashboard() {
       setShowUsers(true);
       setShowEvents(false);
       setShowReports(false);
+      setShowEventParticipantReport(false);
     } catch (error) {
       console.log(error);
 
@@ -177,6 +184,7 @@ function AdminDashboard() {
         setShowReports(true);
         setShowEvents(false);
         setShowUsers(false);
+        setShowEventParticipantReport(false);
       }
     } catch (error) {
       console.log(error);
@@ -190,11 +198,55 @@ function AdminDashboard() {
   };
 
   // ===============================
+  // FETCH EVENT-WISE PARTICIPANT REPORT
+  // ===============================
+
+  const fetchEventParticipantReport = async (
+    showSection = true
+  ) => {
+    setLoadingEventParticipantReport(true);
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/admin/event-participants"
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(
+          data.message ||
+            "Failed to fetch event participant report"
+        );
+        return;
+      }
+
+      setEventParticipantReport(data);
+
+      if (showSection) {
+        setShowEventParticipantReport(true);
+        setShowEvents(false);
+        setShowUsers(false);
+        setShowReports(false);
+      }
+    } catch (error) {
+      console.log(error);
+
+      alert(
+        "Cannot connect to server. Make sure backend is running."
+      );
+    } finally {
+      setLoadingEventParticipantReport(false);
+    }
+  };
+
+  // ===============================
   // LOAD REPORT DATA
   // ===============================
 
   useEffect(() => {
     fetchReports(false);
+    fetchEventParticipantReport(false);
   }, []);
 
   // ===============================
@@ -496,6 +548,29 @@ function AdminDashboard() {
               onClick={() => fetchReports(true)}
             >
               View Reports
+            </button>
+
+          </div>
+
+          {/* EVENT PARTICIPANT REPORT */}
+
+          <div className="dashboard-card">
+
+            <h2>
+              Event Participant Report
+            </h2>
+
+            <p>
+              View participant count for every campus event.
+            </p>
+
+            <button
+              className="dashboard-btn"
+              onClick={() =>
+                fetchEventParticipantReport(true)
+              }
+            >
+              View Event Report
             </button>
 
           </div>
@@ -958,8 +1033,6 @@ function AdminDashboard() {
 
               <div className="dashboard-grid">
 
-                {/* TOTAL USERS */}
-
                 <div className="dashboard-card">
 
                   <h2>
@@ -975,8 +1048,6 @@ function AdminDashboard() {
                   </p>
 
                 </div>
-
-                {/* TOTAL EVENTS */}
 
                 <div className="dashboard-card">
 
@@ -994,8 +1065,6 @@ function AdminDashboard() {
 
                 </div>
 
-                {/* APPROVED */}
-
                 <div className="dashboard-card">
 
                   <h2>
@@ -1011,8 +1080,6 @@ function AdminDashboard() {
                   </p>
 
                 </div>
-
-                {/* REJECTED */}
 
                 <div className="dashboard-card">
 
@@ -1030,8 +1097,6 @@ function AdminDashboard() {
 
                 </div>
 
-                {/* PENDING */}
-
                 <div className="dashboard-card">
 
                   <h2>
@@ -1047,8 +1112,6 @@ function AdminDashboard() {
                   </p>
 
                 </div>
-
-                {/* PARTICIPANTS */}
 
                 <div className="dashboard-card">
 
@@ -1078,6 +1141,159 @@ function AdminDashboard() {
               >
                 No report data available.
               </p>
+
+            )}
+
+          </div>
+
+        )}
+
+        {/* =========================
+            EVENT-WISE PARTICIPANT REPORT
+        ========================= */}
+
+        {showEventParticipantReport && (
+
+          <div
+            className="auth-card"
+            style={{
+              marginTop: "40px",
+              width: "1100px",
+              maxWidth: "95%",
+            }}
+          >
+
+            <h2>
+              Event-wise Participant Report
+            </h2>
+
+            {loadingEventParticipantReport ? (
+
+              <p
+                style={{
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                ⏳ Loading event participant report...
+              </p>
+
+            ) : eventParticipantReport.length > 0 ? (
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    textAlign: "center",
+                  }}
+                >
+
+                  <thead>
+
+                    <tr>
+
+                      <th>
+                        Event
+                      </th>
+
+                      <th>
+                        Date
+                      </th>
+
+                      <th>
+                        Venue
+                      </th>
+
+                      <th>
+                        Status
+                      </th>
+
+                      <th>
+                        Coordinator ID
+                      </th>
+
+                      <th>
+                        Participants
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {eventParticipantReport.map(
+                      (event) => (
+
+                        <tr
+                          key={event.event_id}
+                        >
+
+                          <td>
+                            {event.event_name}
+                          </td>
+
+                          <td>
+                            {new Date(
+                              event.event_date
+                            ).toLocaleDateString()}
+                          </td>
+
+                          <td>
+                            {event.venue}
+                          </td>
+
+                          <td>
+                            {event.status}
+                          </td>
+
+                          <td>
+                            {event.coordinator_id}
+                          </td>
+
+                          <td>
+
+                            <strong>
+                              {event.participant_count}
+                            </strong>
+
+                          </td>
+
+                        </tr>
+
+                      )
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            ) : (
+
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "25px",
+                }}
+              >
+
+                <h3>
+                  No Event Report Data Found
+                </h3>
+
+                <p>
+                  No events are currently available for the participant report.
+                </p>
+
+              </div>
 
             )}
 

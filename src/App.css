@@ -1018,6 +1018,13 @@ a {
   color: white;
 }
 
+/* Week 12 - Filter button alignment */
+
+.events-controls .dashboard-btn {
+  min-height: 50px;
+  white-space: nowrap;
+}
+
 /* ===============================
    EVENTS GRID
 ================================ */
@@ -1320,6 +1327,8 @@ a {
 
   .nav-links {
     gap: 22px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 
@@ -1347,15 +1356,22 @@ a {
 
   .events-controls {
     flex-direction: column;
+    width: 100%;
   }
 
   .events-controls input,
-  .events-controls select {
+  .events-controls select,
+  .events-controls .dashboard-btn {
     width: 100%;
+    max-width: 100%;
   }
 
   .events-grid {
     grid-template-columns: 1fr;
+  }
+
+  .event-card {
+    padding: 23px;
   }
 }
 
@@ -1542,6 +1558,7 @@ a {
     font-size: 15px;
   }
 }
+
 /* ===============================
    ALL DASHBOARD PAGES
 ================================ */
@@ -1664,6 +1681,16 @@ body {
     0 10px 25px rgba(0, 100, 255, 0.30);
 }
 
+.dashboard-btn:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+
+  transform: none;
+
+  box-shadow: none;
+}
+
 /* Dashboard grid */
 
 .dashboard-grid {
@@ -1729,7 +1756,43 @@ body {
   backdrop-filter: blur(10px);
 }
 
-/* Mobile */
+/* ===============================
+   WEEK 12 - DASHBOARD TABLE
+   MOBILE SUPPORT
+================================ */
+
+.dashboard-container .auth-card {
+  overflow-x: auto;
+}
+
+.dashboard-container .auth-card table {
+  min-width: 650px;
+}
+
+.dashboard-container .auth-card input,
+.dashboard-container .auth-card textarea,
+.dashboard-container .auth-card select {
+  max-width: 100%;
+}
+
+.dashboard-container .auth-card form {
+  width: 100%;
+}
+
+/* ===============================
+   WEEK 12 - BETTER BUTTON STATE
+================================ */
+
+.dashboard-btn:focus-visible,
+.event-register-btn:focus-visible,
+.auth-btn:focus-visible {
+  outline: 2px solid #7bb8ff;
+  outline-offset: 3px;
+}
+
+/* ===============================
+   Mobile - Dashboard
+================================ */
 
 @media (max-width: 900px) {
   .dashboard-grid {
@@ -1754,5 +1817,25 @@ body {
 
   .dashboard-container > h1 {
     font-size: 34px;
+  }
+
+  .dashboard-container > p {
+    font-size: 15px;
+  }
+
+  .dashboard-container .auth-card {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    padding: 22px 16px;
+  }
+
+  .dashboard-container .auth-card table {
+    min-width: 650px;
+  }
+
+  .dashboard-btn {
+    padding: 10px 16px;
+    font-size: 13px;
   }
 }

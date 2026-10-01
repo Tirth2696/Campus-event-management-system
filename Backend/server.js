@@ -289,12 +289,15 @@ app.post("/create-event", (req, res) => {
     req.body.coordinator_id;
 
   const title = cleanText(req.body.title);
+
   const description = cleanText(
     req.body.description
   );
+
   const event_date = cleanText(
     req.body.event_date
   );
+
   const venue = cleanText(req.body.venue);
 
   if (
@@ -582,7 +585,8 @@ app.delete(
   "/delete-event/:id",
   (req, res) => {
     const id = req.params.id;
-    const coordinatorId = req.body.coordinator_id;
+    const coordinatorId =
+      req.body.coordinator_id;
 
     if (!isValidId(id)) {
       return res.status(400).json({
@@ -622,7 +626,8 @@ app.delete(
         }
 
         res.json({
-          message: "Event deleted successfully",
+          message:
+            "Event deleted successfully",
         });
       }
     );
@@ -637,7 +642,8 @@ app.put(
   "/update-event/:id",
   (req, res) => {
     const eventId = req.params.id;
-    const coordinatorId = req.body.coordinator_id;
+    const coordinatorId =
+      req.body.coordinator_id;
 
     if (!isValidId(eventId)) {
       return res.status(400).json({
@@ -651,7 +657,9 @@ app.put(
       });
     }
 
-    const title = cleanText(req.body.title);
+    const title = cleanText(
+      req.body.title
+    );
 
     const description = cleanText(
       req.body.description
@@ -787,6 +795,7 @@ app.get(
     );
   }
 );
+
 // ===============================================
 // COORDINATOR: GET OWN EVENT PARTICIPANTS
 // ===============================================
@@ -794,11 +803,13 @@ app.get(
 app.get(
   "/participants/coordinator/:id",
   (req, res) => {
-    const coordinatorId = req.params.id;
+    const coordinatorId =
+      req.params.id;
 
     if (!isValidId(coordinatorId)) {
       return res.status(400).json({
-        message: "Invalid coordinator ID",
+        message:
+          "Invalid coordinator ID",
       });
     }
 
@@ -825,6 +836,54 @@ app.get(
           return res.status(500).json({
             message:
               "Failed to fetch coordinator participants",
+          });
+        }
+
+        res.json(results);
+      }
+    );
+  }
+);
+
+// ===============================================
+// ADMIN: EVENT-WISE PARTICIPANT REPORT
+// ===============================================
+
+app.get(
+  "/admin/event-participants",
+  (req, res) => {
+    const sql = `
+      SELECT
+        e.event_id,
+        e.title AS event_name,
+        e.event_date,
+        e.venue,
+        e.status,
+        e.coordinator_id,
+        COUNT(er.student_email) AS participant_count
+      FROM events e
+      LEFT JOIN event_registrations er
+        ON LOWER(TRIM(er.event_name)) =
+           LOWER(TRIM(e.title))
+      GROUP BY
+        e.event_id,
+        e.title,
+        e.event_date,
+        e.venue,
+        e.status,
+        e.coordinator_id
+      ORDER BY e.event_date ASC
+    `;
+
+    db.query(
+      sql,
+      (err, results) => {
+        if (err) {
+          console.log(err);
+
+          return res.status(500).json({
+            message:
+              "Failed to fetch event participant report",
           });
         }
 

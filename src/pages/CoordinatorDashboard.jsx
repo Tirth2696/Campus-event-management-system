@@ -13,6 +13,10 @@ function CoordinatorDashboard() {
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
 
+  // FORM SUBMIT LOADING STATES
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [updatingEvent, setUpdatingEvent] = useState(false);
+
   // EDIT EVENT
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -159,6 +163,10 @@ function CoordinatorDashboard() {
   const handleCreateEvent = async (e) => {
     e.preventDefault();
 
+    if (creatingEvent) {
+      return;
+    }
+
     const title = e.target.title.value.trim();
     const description =
       e.target.description.value.trim();
@@ -174,6 +182,7 @@ function CoordinatorDashboard() {
       return;
     }
 
+    // CLIENT-SIDE VALIDATION
     if (
       !title ||
       !description ||
@@ -184,6 +193,32 @@ function CoordinatorDashboard() {
       return;
     }
 
+    if (title.length < 3) {
+      alert(
+        "Event title must contain at least 3 characters."
+      );
+      return;
+    }
+
+    if (description.length < 5) {
+      alert(
+        "Event description must contain at least 5 characters."
+      );
+      return;
+    }
+
+    if (venue.length < 2) {
+      alert("Please enter a valid venue.");
+      return;
+    }
+
+    if (isNaN(Date.parse(eventDate))) {
+      alert("Please provide a valid event date.");
+      return;
+    }
+
+    setCreatingEvent(true);
+
     try {
       const response = await fetch(
         "http://localhost:5000/create-event",
@@ -193,7 +228,9 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(coordinatorId),
+            coordinator_id: Number(
+              coordinatorId
+            ),
             title: title,
             description: description,
             event_date: eventDate,
@@ -204,24 +241,32 @@ function CoordinatorDashboard() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        alert(
+          data.message ||
+            "Event creation failed."
+        );
+        return;
+      }
+
       alert(
         data.message ||
-          "Event creation completed."
+          "Event created successfully."
       );
 
-      if (response.ok) {
-        e.target.reset();
-        setShowForm(false);
+      e.target.reset();
+      setShowForm(false);
 
-        fetchEvents();
-        fetchParticipants();
-      }
+      fetchEvents();
+      fetchParticipants();
     } catch (error) {
       console.log(error);
 
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setCreatingEvent(false);
     }
   };
 
@@ -253,6 +298,10 @@ function CoordinatorDashboard() {
   const handleUpdateEvent = async (e) => {
     e.preventDefault();
 
+    if (updatingEvent) {
+      return;
+    }
+
     const coordinatorId = getCoordinatorId();
 
     if (!coordinatorId) {
@@ -262,15 +311,59 @@ function CoordinatorDashboard() {
       return;
     }
 
+    if (!editingEvent) {
+      alert("No event selected for editing.");
+      return;
+    }
+
+    const title =
+      editingEvent.title.trim();
+
+    const description =
+      editingEvent.description.trim();
+
+    const eventDate =
+      editingEvent.event_date;
+
+    const venue =
+      editingEvent.venue.trim();
+
+    // CLIENT-SIDE VALIDATION
     if (
-      !editingEvent.title ||
-      !editingEvent.description ||
-      !editingEvent.event_date ||
-      !editingEvent.venue
+      !title ||
+      !description ||
+      !eventDate ||
+      !venue
     ) {
       alert("Please fill all fields");
       return;
     }
+
+    if (title.length < 3) {
+      alert(
+        "Event title must contain at least 3 characters."
+      );
+      return;
+    }
+
+    if (description.length < 5) {
+      alert(
+        "Event description must contain at least 5 characters."
+      );
+      return;
+    }
+
+    if (venue.length < 2) {
+      alert("Please enter a valid venue.");
+      return;
+    }
+
+    if (isNaN(Date.parse(eventDate))) {
+      alert("Please provide a valid event date.");
+      return;
+    }
+
+    setUpdatingEvent(true);
 
     try {
       const response = await fetch(
@@ -281,37 +374,45 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(coordinatorId),
-            title: editingEvent.title,
-            description:
-              editingEvent.description,
-            event_date:
-              editingEvent.event_date,
-            venue: editingEvent.venue,
+            coordinator_id: Number(
+              coordinatorId
+            ),
+            title: title,
+            description: description,
+            event_date: eventDate,
+            venue: venue,
           }),
         }
       );
 
       const data = await response.json();
 
+      if (!response.ok) {
+        alert(
+          data.message ||
+            "Event update failed."
+        );
+        return;
+      }
+
       alert(
         data.message ||
-          "Event update completed."
+          "Event updated successfully."
       );
 
-      if (response.ok) {
-        setEditingEvent(null);
-        setShowEditForm(false);
+      setEditingEvent(null);
+      setShowEditForm(false);
 
-        fetchEvents();
-        fetchParticipants();
-      }
+      fetchEvents();
+      fetchParticipants();
     } catch (error) {
       console.log(error);
 
       alert(
         "Cannot connect to server. Make sure backend is running."
       );
+    } finally {
+      setUpdatingEvent(false);
     }
   };
 
@@ -467,7 +568,9 @@ function CoordinatorDashboard() {
             </h2>
 
             <h1>
-              {loadingEvents ? "..." : totalEvents}
+              {loadingEvents
+                ? "..."
+                : totalEvents}
             </h1>
 
             <p>
@@ -494,7 +597,9 @@ function CoordinatorDashboard() {
             </h2>
 
             <h1>
-              {loadingEvents ? "..." : approvedEvents}
+              {loadingEvents
+                ? "..."
+                : approvedEvents}
             </h1>
 
             <p>
@@ -521,7 +626,9 @@ function CoordinatorDashboard() {
             </h2>
 
             <h1>
-              {loadingEvents ? "..." : pendingEvents}
+              {loadingEvents
+                ? "..."
+                : pendingEvents}
             </h1>
 
             <p>
@@ -680,29 +787,36 @@ function CoordinatorDashboard() {
                 type="text"
                 name="title"
                 placeholder="Event Title"
+                disabled={creatingEvent}
               />
 
               <textarea
                 name="description"
                 placeholder="Event Description"
+                disabled={creatingEvent}
               />
 
               <input
                 type="date"
                 name="eventDate"
+                disabled={creatingEvent}
               />
 
               <input
                 type="text"
                 name="venue"
                 placeholder="Venue"
+                disabled={creatingEvent}
               />
 
               <button
                 type="submit"
                 className="dashboard-btn"
+                disabled={creatingEvent}
               >
-                Create Event
+                {creatingEvent
+                  ? "Creating Event..."
+                  : "Create Event"}
               </button>
 
             </form>
@@ -916,6 +1030,7 @@ function CoordinatorDashboard() {
                   value={
                     editingEvent.title
                   }
+                  disabled={updatingEvent}
                   onChange={(e) =>
                     setEditingEvent({
                       ...editingEvent,
@@ -930,6 +1045,7 @@ function CoordinatorDashboard() {
                   value={
                     editingEvent.description
                   }
+                  disabled={updatingEvent}
                   onChange={(e) =>
                     setEditingEvent({
                       ...editingEvent,
@@ -944,6 +1060,7 @@ function CoordinatorDashboard() {
                   value={
                     editingEvent.event_date
                   }
+                  disabled={updatingEvent}
                   onChange={(e) =>
                     setEditingEvent({
                       ...editingEvent,
@@ -959,6 +1076,7 @@ function CoordinatorDashboard() {
                   value={
                     editingEvent.venue
                   }
+                  disabled={updatingEvent}
                   onChange={(e) =>
                     setEditingEvent({
                       ...editingEvent,
@@ -971,8 +1089,11 @@ function CoordinatorDashboard() {
                 <button
                   type="submit"
                   className="dashboard-btn"
+                  disabled={updatingEvent}
                 >
-                  Update Event
+                  {updatingEvent
+                    ? "Updating Event..."
+                    : "Update Event"}
                 </button>
 
                 <button
@@ -981,6 +1102,7 @@ function CoordinatorDashboard() {
                   style={{
                     marginLeft: "10px",
                   }}
+                  disabled={updatingEvent}
                   onClick={() => {
                     setShowEditForm(false);
                     setEditingEvent(null);
