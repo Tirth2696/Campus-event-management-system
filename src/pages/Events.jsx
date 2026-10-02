@@ -10,6 +10,8 @@ function Events() {
   const [filterStatus, setFilterStatus] = useState("All");
   const [sortBy, setSortBy] = useState("date-asc");
 
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
   // ===============================
   // FETCH EVENTS
   // ===============================
@@ -41,10 +43,35 @@ function Events() {
   }, []);
 
   // ===============================
+  // EVENT TIMING
+  // ===============================
+
+  const isEventCompleted = (eventDate) => {
+    if (!eventDate) {
+      return false;
+    }
+
+    return new Date(eventDate) < new Date();
+  };
+
+  const getEventTiming = (eventDate) => {
+    return isEventCompleted(eventDate)
+      ? "Completed"
+      : "Upcoming";
+  };
+
+  // ===============================
   // HANDLE EVENT REGISTRATION
   // ===============================
 
   const handleRegister = async (event) => {
+    if (isEventCompleted(event.event_date)) {
+      alert(
+        "Registration is not available for completed events."
+      );
+      return;
+    }
+
     const student_email =
       localStorage.getItem("student_email") ||
       localStorage.getItem("email");
@@ -174,6 +201,14 @@ function Events() {
     setSortBy("date-asc");
   };
 
+  // ===============================
+  // CLOSE EVENT DETAILS
+  // ===============================
+
+  const closeEventDetails = () => {
+    setSelectedEvent(null);
+  };
+
   return (
     <div className="events-page">
 
@@ -259,8 +294,6 @@ function Events() {
 
         <div className="events-controls">
 
-          {/* SEARCH */}
-
           <input
             type="text"
             placeholder="Search by title, description or venue..."
@@ -269,8 +302,6 @@ function Events() {
               setSearch(e.target.value)
             }
           />
-
-          {/* STATUS FILTER */}
 
           <select
             value={filterStatus}
@@ -297,8 +328,6 @@ function Events() {
 
           </select>
 
-          {/* SORT */}
-
           <select
             value={sortBy}
             onChange={(e) =>
@@ -324,8 +353,6 @@ function Events() {
 
           </select>
 
-          {/* CLEAR */}
-
           <button
             type="button"
             className="dashboard-btn"
@@ -350,14 +377,18 @@ function Events() {
           >
 
             <p>
+
               Showing{" "}
+
               <strong>
                 {sortedEvents.length}
               </strong>{" "}
+
               event
               {sortedEvents.length !== 1
                 ? "s"
                 : ""}
+
             </p>
 
           </div>
@@ -386,83 +417,144 @@ function Events() {
 
           ) : sortedEvents.length > 0 ? (
 
-            sortedEvents.map((event) => (
+            sortedEvents.map((event) => {
 
-              <div
-                className="event-card"
-                key={event.event_id}
-              >
+              const completed =
+                isEventCompleted(
+                  event.event_date
+                );
 
-                <div className="event-card-top">
+              const timing =
+                getEventTiming(
+                  event.event_date
+                );
 
-                  <span className="event-badge">
-                    {event.status}
-                  </span>
+              return (
 
-                </div>
+                <div
+                  className="event-card"
+                  key={event.event_id}
+                >
 
-                <h2>
-                  {event.title}
-                </h2>
+                  <div className="event-card-top">
 
-                <p className="event-description">
-                  {event.description}
-                </p>
-
-                <div className="event-details">
-
-                  <p>
-
-                    <strong>
-                      Date
-                    </strong>
-
-                    <span>
-                      {new Date(
-                        event.event_date
-                      ).toLocaleString()}
+                    <span className="event-badge">
+                      {event.status}
                     </span>
 
-                  </p>
-
-                  <p>
-
-                    <strong>
-                      Venue
-                    </strong>
-
-                    <span>
-                      {event.venue}
+                    <span
+                      className="event-badge"
+                      style={{
+                        marginLeft: "8px",
+                      }}
+                    >
+                      {timing}
                     </span>
 
-                  </p>
-
-                </div>
-
-                {event.status &&
-                event.status.toLowerCase() ===
-                  "approved" ? (
-
-                  <button
-                    className="event-register-btn"
-                    onClick={() =>
-                      handleRegister(event)
-                    }
-                  >
-                    Register for Event
-                  </button>
-
-                ) : (
-
-                  <div className="unavailable">
-                    Registration unavailable
                   </div>
 
-                )}
+                  <h2>
+                    {event.title}
+                  </h2>
 
-              </div>
+                  <p className="event-description">
+                    {event.description}
+                  </p>
 
-            ))
+                  <div className="event-details">
+
+                    <p>
+
+                      <strong>
+                        Date
+                      </strong>
+
+                      <span>
+                        {new Date(
+                          event.event_date
+                        ).toLocaleString()}
+                      </span>
+
+                    </p>
+
+                    <p>
+
+                      <strong>
+                        Venue
+                      </strong>
+
+                      <span>
+                        {event.venue}
+                      </span>
+
+                    </p>
+
+                    <p>
+
+                      <strong>
+                        Capacity
+                      </strong>
+
+                      <span>
+                        {event.max_participants ||
+                          50}{" "}
+                        participants
+                      </span>
+
+                    </p>
+
+                  </div>
+
+                  {/* VIEW DETAILS */}
+
+                  <button
+                    type="button"
+                    className="dashboard-btn"
+                    style={{
+                      width: "100%",
+                      marginBottom: "10px",
+                    }}
+                    onClick={() =>
+                      setSelectedEvent(event)
+                    }
+                  >
+                    View Details
+                  </button>
+
+                  {/* REGISTRATION */}
+
+                  {completed ? (
+
+                    <div className="unavailable">
+                      Event Completed
+                    </div>
+
+                  ) : event.status &&
+                    event.status.toLowerCase() ===
+                      "approved" ? (
+
+                    <button
+                      className="event-register-btn"
+                      onClick={() =>
+                        handleRegister(event)
+                      }
+                    >
+                      Register for Event
+                    </button>
+
+                  ) : (
+
+                    <div className="unavailable">
+                      Registration unavailable
+                    </div>
+
+                  )}
+
+                </div>
+
+              );
+
+            })
 
           ) : (
 
@@ -492,6 +584,277 @@ function Events() {
         </div>
 
       </div>
+
+      {/* =========================
+          EVENT DETAILS MODAL
+      ========================= */}
+
+      {selectedEvent && (
+
+        <div
+          onClick={closeEventDetails}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "20px",
+            zIndex: 9999,
+          }}
+        >
+
+          <div
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            style={{
+              width: "100%",
+              maxWidth: "650px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              background: "#ffffff",
+              borderRadius: "18px",
+              padding: "28px",
+              boxShadow:
+                "0 20px 50px rgba(0,0,0,0.3)",
+              color: "#222",
+            }}
+          >
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: "center",
+                gap: "15px",
+                marginBottom: "20px",
+              }}
+            >
+
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "28px",
+                }}
+              >
+                {selectedEvent.title}
+              </h2>
+
+              <button
+                type="button"
+                onClick={closeEventDetails}
+                style={{
+                  border: "none",
+                  background: "#eeeeee",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  cursor: "pointer",
+                  fontSize: "20px",
+                  fontWeight: "700",
+                }}
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div
+              style={{
+                marginBottom: "20px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
+
+              <span
+                className="event-badge"
+                style={{
+                  display: "inline-block",
+                }}
+              >
+                {selectedEvent.status}
+              </span>
+
+              <span
+                className="event-badge"
+                style={{
+                  display: "inline-block",
+                }}
+              >
+                {getEventTiming(
+                  selectedEvent.event_date
+                )}
+              </span>
+
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gap: "16px",
+              }}
+            >
+
+              <div>
+
+                <strong>
+                  Description
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {selectedEvent.description ||
+                    "No description available"}
+                </p>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  Date & Time
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {new Date(
+                    selectedEvent.event_date
+                  ).toLocaleString()}
+                </p>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  Venue
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {selectedEvent.venue ||
+                    "Venue not available"}
+                </p>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  Maximum Participants
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {selectedEvent.max_participants ||
+                    50}
+                </p>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  Event ID
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {selectedEvent.event_id}
+                </p>
+
+              </div>
+
+              <div>
+
+                <strong>
+                  Coordinator ID
+                </strong>
+
+                <p
+                  style={{
+                    marginTop: "6px",
+                  }}
+                >
+                  {selectedEvent.coordinator_id}
+                </p>
+
+              </div>
+
+            </div>
+
+            {isEventCompleted(
+              selectedEvent.event_date
+            ) ? (
+
+              <div
+                className="unavailable"
+                style={{
+                  marginTop: "20px",
+                }}
+              >
+                Event Completed
+              </div>
+
+            ) : selectedEvent.status &&
+              selectedEvent.status.toLowerCase() ===
+                "approved" ? (
+
+              <button
+                type="button"
+                className="event-register-btn"
+                style={{
+                  width: "100%",
+                  marginTop: "20px",
+                }}
+                onClick={() => {
+                  closeEventDetails();
+                  handleRegister(
+                    selectedEvent
+                  );
+                }}
+              >
+                Register for Event
+              </button>
+
+            ) : (
+
+              <div
+                className="unavailable"
+                style={{
+                  marginTop: "20px",
+                }}
+              >
+                Registration unavailable
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+      )}
 
       {/* =========================
           FOOTER

@@ -219,61 +219,171 @@ app.post("/event-register", (req, res) => {
     });
   }
 
-  const checkSql = `
-    SELECT *
-    FROM event_registrations
-    WHERE student_email = ?
-    AND event_name = ?
+  // =========================================
+  // FIND EVENT + GET MAX PARTICIPANT CAPACITY
+  // =========================================
+
+  const eventSql = `
+    SELECT
+      event_id,
+      title,
+      status,
+      max_participants
+    FROM events
+    WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))
+    LIMIT 1
   `;
 
   db.query(
-    checkSql,
-    [student_email, event_name],
-    (err, results) => {
+    eventSql,
+    [event_name],
+    (err, eventResults) => {
       if (err) {
         console.log(err);
 
         return res.status(500).json({
           message:
-            "Failed to check registration",
+            "Failed to check event details",
         });
       }
 
-      if (results.length > 0) {
+      if (eventResults.length === 0) {
+        return res.status(404).json({
+          message: "Event not found",
+        });
+      }
+
+      const event = eventResults[0];
+
+      // =========================================
+      // ONLY APPROVED EVENTS CAN BE REGISTERED
+      // =========================================
+
+      if (
+        String(event.status).toLowerCase() !==
+        "approved"
+      ) {
         return res.status(400).json({
           message:
-            "You are already registered for this event!",
+            "Registration is available only for approved events",
         });
       }
 
-      const insertSql = `
-        INSERT INTO event_registrations
-        (student_email, event_name, event_date, event_location)
-        VALUES (?, ?, ?, ?)
+      // =========================================
+      // DUPLICATE REGISTRATION CHECK
+      // =========================================
+
+      const checkSql = `
+        SELECT *
+        FROM event_registrations
+        WHERE LOWER(TRIM(student_email)) = LOWER(TRIM(?))
+        AND LOWER(TRIM(event_name)) = LOWER(TRIM(?))
       `;
 
       db.query(
-        insertSql,
-        [
-          student_email,
-          event_name,
-          event_date,
-          event_location,
-        ],
-        (err) => {
+        checkSql,
+        [student_email, event.title],
+        (err, results) => {
           if (err) {
             console.log(err);
 
             return res.status(500).json({
               message:
-                "Event registration failed",
+                "Failed to check registration",
             });
           }
 
-          res.json({
-            message:
-              "Successfully registered for the event!",
-          });
+          if (results.length > 0) {
+            return res.status(400).json({
+              message:
+                "You are already registered for this event!",
+            });
+          }
+
+          // =========================================
+          // CURRENT PARTICIPANT COUNT
+          // =========================================
+
+          const countSql = `
+            SELECT COUNT(*) AS participant_count
+            FROM event_registrations
+            WHERE LOWER(TRIM(event_name)) =
+                  LOWER(TRIM(?))
+          `;
+
+          db.query(
+            countSql,
+            [event.title],
+            (err, countResults) => {
+              if (err) {
+                console.log(err);
+
+                return res.status(500).json({
+                  message:
+                    "Failed to check event capacity",
+                });
+              }
+
+              const currentParticipants =
+                Number(
+                  countResults[0].participant_count
+                ) || 0;
+
+              const maxParticipants =
+                Number(
+                  event.max_participants
+                ) || 50;
+
+              // =========================================
+              // CAPACITY CHECK
+              // =========================================
+
+              if (
+                currentParticipants >=
+                maxParticipants
+              ) {
+                return res.status(400).json({
+                  message:
+                    `Registration closed. Maximum capacity of ${maxParticipants} participants has been reached.`,
+                });
+              }
+
+              // =========================================
+              // INSERT REGISTRATION
+              // =========================================
+
+              const insertSql = `
+                INSERT INTO event_registrations
+                (student_email, event_name, event_date, event_location)
+                VALUES (?, ?, ?, ?)
+              `;
+
+              db.query(
+                insertSql,
+                [
+                  student_email,
+                  event.title,
+                  event_date,
+                  event_location,
+                ],
+                (err) => {
+                  if (err) {
+                    console.log(err);
+
+                    return res.status(500).json({
+                      message:
+                        "Event registration failed",
+                    });
+                  }
+
+                  res.json({
+                    message:
+                      "Successfully registered for the event!",
+                  });
+                }
+              );
+            }
+          );
         }
       );
     }
@@ -299,6 +409,13 @@ app.post("/create-event", (req, res) => {
   );
 
   const venue = cleanText(req.body.venue);
+
+  // Default capacity = 50
+  const max_participants =
+    req.body.max_participants === undefined ||
+    req.body.max_participants === ""
+      ? 50
+      : Number(req.body.max_participants);
 
   if (
     !coordinator_id ||
@@ -345,10 +462,28 @@ app.post("/create-event", (req, res) => {
     });
   }
 
+  if (
+    !Number.isInteger(max_participants) ||
+    max_participants < 1
+  ) {
+    return res.status(400).json({
+      message:
+        "Maximum participants must be a positive whole number",
+    });
+  }
+
   const sql = `
     INSERT INTO events
-    (coordinator_id, title, description, event_date, venue, status)
-    VALUES (?, ?, ?, ?, ?, ?)
+    (
+      coordinator_id,
+      title,
+      description,
+      event_date,
+      venue,
+      status,
+      max_participants
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
   db.query(
@@ -360,6 +495,7 @@ app.post("/create-event", (req, res) => {
       event_date,
       venue,
       "Pending",
+      max_participants,
     ],
     (err) => {
       if (err) {
@@ -614,7 +750,8 @@ app.delete(
           console.log(err);
 
           return res.status(500).json({
-            message: "Failed to delete event",
+            message:
+              "Failed to delete event",
           });
         }
 
@@ -673,6 +810,12 @@ app.put(
       req.body.venue
     );
 
+    const max_participants =
+      req.body.max_participants === undefined ||
+      req.body.max_participants === ""
+        ? 50
+        : Number(req.body.max_participants);
+
     if (
       !title ||
       !description ||
@@ -711,52 +854,143 @@ app.put(
       });
     }
 
-    const sql = `
-      UPDATE events
-      SET
-        title = ?,
-        description = ?,
-        event_date = ?,
-        venue = ?
-      WHERE
-        event_id = ?
-        AND coordinator_id = ?
+    if (
+      !Number.isInteger(max_participants) ||
+      max_participants < 1
+    ) {
+      return res.status(400).json({
+        message:
+          "Maximum participants must be a positive whole number",
+      });
+    }
+
+    // =========================================
+    // GET CURRENT EVENT
+    // =========================================
+
+    const currentEventSql = `
+      SELECT title
+      FROM events
+      WHERE event_id = ?
+      AND coordinator_id = ?
+      LIMIT 1
     `;
 
     db.query(
-      sql,
-      [
-        title,
-        description,
-        event_date,
-        venue,
-        eventId,
-        coordinatorId,
-      ],
-      (err, result) => {
+      currentEventSql,
+      [eventId, coordinatorId],
+      (err, eventResults) => {
         if (err) {
-          console.log(
-            "UPDATE EVENT ERROR:",
-            err
-          );
+          console.log(err);
 
           return res.status(500).json({
             message:
-              "Event update failed",
+              "Failed to fetch event details",
           });
         }
 
-        if (result.affectedRows === 0) {
+        if (eventResults.length === 0) {
           return res.status(404).json({
             message:
               "Event not found or you are not authorized to update it",
           });
         }
 
-        res.json({
-          message:
-            "Event updated successfully",
-        });
+        // =========================================
+        // CHECK CURRENT PARTICIPANT COUNT
+        // =========================================
+
+        const countSql = `
+          SELECT COUNT(*) AS participant_count
+          FROM event_registrations
+          WHERE LOWER(TRIM(event_name)) =
+                LOWER(TRIM(?))
+        `;
+
+        db.query(
+          countSql,
+          [eventResults[0].title],
+          (err, countResults) => {
+            if (err) {
+              console.log(err);
+
+              return res.status(500).json({
+                message:
+                  "Failed to check participant count",
+              });
+            }
+
+            const currentParticipants =
+              Number(
+                countResults[0].participant_count
+              ) || 0;
+
+            // =========================================
+            // CAPACITY CANNOT GO BELOW CURRENT COUNT
+            // =========================================
+
+            if (
+              max_participants <
+              currentParticipants
+            ) {
+              return res.status(400).json({
+                message:
+                  `Maximum participants cannot be less than the current participant count (${currentParticipants})`,
+              });
+            }
+
+            const sql = `
+              UPDATE events
+              SET
+                title = ?,
+                description = ?,
+                event_date = ?,
+                venue = ?,
+                max_participants = ?
+              WHERE
+                event_id = ?
+                AND coordinator_id = ?
+            `;
+
+            db.query(
+              sql,
+              [
+                title,
+                description,
+                event_date,
+                venue,
+                max_participants,
+                eventId,
+                coordinatorId,
+              ],
+              (err, result) => {
+                if (err) {
+                  console.log(
+                    "UPDATE EVENT ERROR:",
+                    err
+                  );
+
+                  return res.status(500).json({
+                    message:
+                      "Event update failed",
+                  });
+                }
+
+                if (result.affectedRows === 0) {
+                  return res.status(404).json({
+                    message:
+                      "Event not found or you are not authorized to update it",
+                  });
+                }
+
+                res.json({
+                  message:
+                    "Event updated successfully",
+                });
+              }
+            );
+          }
+        );
       }
     );
   }
@@ -860,6 +1094,7 @@ app.get(
         e.venue,
         e.status,
         e.coordinator_id,
+        e.max_participants,
         COUNT(er.student_email) AS participant_count
       FROM events e
       LEFT JOIN event_registrations er
@@ -871,7 +1106,8 @@ app.get(
         e.event_date,
         e.venue,
         e.status,
-        e.coordinator_id
+        e.coordinator_id,
+        e.max_participants
       ORDER BY e.event_date ASC
     `;
 

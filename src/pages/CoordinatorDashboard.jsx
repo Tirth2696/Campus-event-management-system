@@ -11,9 +11,9 @@ function CoordinatorDashboard() {
   const [participants, setParticipants] = useState([]);
 
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [loadingParticipants, setLoadingParticipants] =
+    useState(false);
 
-  // FORM SUBMIT LOADING STATES
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [updatingEvent, setUpdatingEvent] = useState(false);
 
@@ -168,10 +168,19 @@ function CoordinatorDashboard() {
     }
 
     const title = e.target.title.value.trim();
+
     const description =
       e.target.description.value.trim();
+
     const eventDate = e.target.eventDate.value;
+
     const venue = e.target.venue.value.trim();
+
+    const maxParticipantsValue =
+      e.target.maxParticipants.value;
+
+    const maxParticipants =
+      Number(maxParticipantsValue);
 
     const coordinatorId = getCoordinatorId();
 
@@ -182,12 +191,12 @@ function CoordinatorDashboard() {
       return;
     }
 
-    // CLIENT-SIDE VALIDATION
     if (
       !title ||
       !description ||
       !eventDate ||
-      !venue
+      !venue ||
+      !maxParticipantsValue
     ) {
       alert("Please fill all fields");
       return;
@@ -195,25 +204,35 @@ function CoordinatorDashboard() {
 
     if (title.length < 3) {
       alert(
-        "Event title must contain at least 3 characters."
+        "Event title must contain at least 3 characters"
       );
       return;
     }
 
     if (description.length < 5) {
       alert(
-        "Event description must contain at least 5 characters."
+        "Event description must contain at least 5 characters"
       );
       return;
     }
 
     if (venue.length < 2) {
-      alert("Please enter a valid venue.");
+      alert("Please enter a valid venue");
       return;
     }
 
     if (isNaN(Date.parse(eventDate))) {
-      alert("Please provide a valid event date.");
+      alert("Please provide a valid event date");
+      return;
+    }
+
+    if (
+      !Number.isInteger(maxParticipants) ||
+      maxParticipants < 1
+    ) {
+      alert(
+        "Maximum participants must be a positive whole number"
+      );
       return;
     }
 
@@ -228,37 +247,32 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(
-              coordinatorId
-            ),
+            coordinator_id:
+              Number(coordinatorId),
             title: title,
             description: description,
             event_date: eventDate,
             venue: venue,
+            max_participants:
+              maxParticipants,
           }),
         }
       );
 
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(
-          data.message ||
-            "Event creation failed."
-        );
-        return;
-      }
-
       alert(
         data.message ||
-          "Event created successfully."
+          "Event creation completed."
       );
 
-      e.target.reset();
-      setShowForm(false);
+      if (response.ok) {
+        e.target.reset();
+        setShowForm(false);
 
-      fetchEvents();
-      fetchParticipants();
+        fetchEvents();
+        fetchParticipants();
+      }
     } catch (error) {
       console.log(error);
 
@@ -279,10 +293,15 @@ function CoordinatorDashboard() {
       event_id: event.event_id,
       title: event.title,
       description: event.description,
+
       event_date: event.event_date
         ? event.event_date.substring(0, 10)
         : "",
+
       venue: event.venue,
+
+      max_participants:
+        event.max_participants || 50,
     });
 
     setShowEditForm(true);
@@ -311,55 +330,62 @@ function CoordinatorDashboard() {
       return;
     }
 
-    if (!editingEvent) {
-      alert("No event selected for editing.");
-      return;
-    }
-
-    const title =
-      editingEvent.title.trim();
-
-    const description =
-      editingEvent.description.trim();
-
-    const eventDate =
-      editingEvent.event_date;
-
-    const venue =
-      editingEvent.venue.trim();
-
-    // CLIENT-SIDE VALIDATION
     if (
-      !title ||
-      !description ||
-      !eventDate ||
-      !venue
+      !editingEvent.title ||
+      !editingEvent.description ||
+      !editingEvent.event_date ||
+      !editingEvent.venue ||
+      !editingEvent.max_participants
     ) {
       alert("Please fill all fields");
       return;
     }
 
-    if (title.length < 3) {
+    const maxParticipants = Number(
+      editingEvent.max_participants
+    );
+
+    if (editingEvent.title.trim().length < 3) {
       alert(
-        "Event title must contain at least 3 characters."
+        "Event title must contain at least 3 characters"
       );
       return;
     }
 
-    if (description.length < 5) {
+    if (
+      editingEvent.description.trim().length < 5
+    ) {
       alert(
-        "Event description must contain at least 5 characters."
+        "Event description must contain at least 5 characters"
       );
       return;
     }
 
-    if (venue.length < 2) {
-      alert("Please enter a valid venue.");
+    if (
+      editingEvent.venue.trim().length < 2
+    ) {
+      alert("Please enter a valid venue");
       return;
     }
 
-    if (isNaN(Date.parse(eventDate))) {
-      alert("Please provide a valid event date.");
+    if (
+      isNaN(
+        Date.parse(editingEvent.event_date)
+      )
+    ) {
+      alert(
+        "Please provide a valid event date"
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(maxParticipants) ||
+      maxParticipants < 1
+    ) {
+      alert(
+        "Maximum participants must be a positive whole number"
+      );
       return;
     }
 
@@ -374,37 +400,41 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(
-              coordinatorId
-            ),
-            title: title,
-            description: description,
-            event_date: eventDate,
-            venue: venue,
+            coordinator_id:
+              Number(coordinatorId),
+
+            title:
+              editingEvent.title.trim(),
+
+            description:
+              editingEvent.description.trim(),
+
+            event_date:
+              editingEvent.event_date,
+
+            venue:
+              editingEvent.venue.trim(),
+
+            max_participants:
+              maxParticipants,
           }),
         }
       );
 
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(
-          data.message ||
-            "Event update failed."
-        );
-        return;
-      }
-
       alert(
         data.message ||
-          "Event updated successfully."
+          "Event update completed."
       );
 
-      setEditingEvent(null);
-      setShowEditForm(false);
+      if (response.ok) {
+        setEditingEvent(null);
+        setShowEditForm(false);
 
-      fetchEvents();
-      fetchParticipants();
+        fetchEvents();
+        fetchParticipants();
+      }
     } catch (error) {
       console.log(error);
 
@@ -447,9 +477,8 @@ function CoordinatorDashboard() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            coordinator_id: Number(
-              coordinatorId
-            ),
+            coordinator_id:
+              Number(coordinatorId),
           }),
         }
       );
@@ -480,6 +509,81 @@ function CoordinatorDashboard() {
         "Cannot connect to server. Make sure backend is running."
       );
     }
+  };
+
+  // ===============================
+  // EXPORT PARTICIPANTS TO CSV
+  // ===============================
+
+  const exportParticipantsCSV = () => {
+    if (participants.length === 0) {
+      alert(
+        "No participants available to export."
+      );
+      return;
+    }
+
+    const headers = [
+      "Student Email",
+      "Event",
+      "Date",
+      "Location",
+    ];
+
+    const rows = participants.map(
+      (participant) => [
+        participant.student_email || "",
+        participant.event_name || "",
+        formatDate(participant.event_date),
+        participant.event_location || "",
+      ]
+    );
+
+    const csvContent = [
+      headers,
+      ...rows,
+    ]
+      .map((row) =>
+        row
+          .map((value) =>
+            `"${String(value).replace(
+              /"/g,
+              '""'
+            )}"`
+          )
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob(
+      [csvContent],
+      {
+        type: "text/csv;charset=utf-8;",
+      }
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+      "coordinator_participants.csv";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+
+    alert(
+      "Participant data exported successfully!"
+    );
   };
 
   // ===============================
@@ -550,8 +654,6 @@ function CoordinatorDashboard() {
           }}
         >
 
-          {/* TOTAL EVENTS */}
-
           <div className="dashboard-card">
 
             <div
@@ -578,8 +680,6 @@ function CoordinatorDashboard() {
             </p>
 
           </div>
-
-          {/* APPROVED EVENTS */}
 
           <div className="dashboard-card">
 
@@ -608,8 +708,6 @@ function CoordinatorDashboard() {
 
           </div>
 
-          {/* PENDING EVENTS */}
-
           <div className="dashboard-card">
 
             <div
@@ -636,8 +734,6 @@ function CoordinatorDashboard() {
             </p>
 
           </div>
-
-          {/* TOTAL PARTICIPANTS */}
 
           <div className="dashboard-card">
 
@@ -674,8 +770,6 @@ function CoordinatorDashboard() {
 
         <div className="dashboard-grid">
 
-          {/* CREATE EVENT */}
-
           <div className="dashboard-card">
 
             <h2>
@@ -690,17 +784,20 @@ function CoordinatorDashboard() {
               className="dashboard-btn"
               onClick={() => {
                 setShowForm(!showForm);
+
                 setShowManage(false);
+
                 setShowParticipants(false);
+
                 setShowEditForm(false);
+
+                setEditingEvent(null);
               }}
             >
               Create Event
             </button>
 
           </div>
-
-          {/* MANAGE EVENTS */}
 
           <div className="dashboard-card">
 
@@ -719,17 +816,20 @@ function CoordinatorDashboard() {
                 fetchParticipants();
 
                 setShowManage(!showManage);
+
                 setShowForm(false);
+
                 setShowParticipants(false);
+
                 setShowEditForm(false);
+
+                setEditingEvent(null);
               }}
             >
               Manage Events
             </button>
 
           </div>
-
-          {/* PARTICIPANTS */}
 
           <div className="dashboard-card">
 
@@ -751,8 +851,12 @@ function CoordinatorDashboard() {
                 );
 
                 setShowForm(false);
+
                 setShowManage(false);
+
                 setShowEditForm(false);
+
+                setEditingEvent(null);
               }}
             >
               View Participants
@@ -781,7 +885,9 @@ function CoordinatorDashboard() {
               Create New Event
             </h2>
 
-            <form onSubmit={handleCreateEvent}>
+            <form
+              onSubmit={handleCreateEvent}
+            >
 
               <input
                 type="text"
@@ -808,6 +914,26 @@ function CoordinatorDashboard() {
                 placeholder="Venue"
                 disabled={creatingEvent}
               />
+
+              <input
+                type="number"
+                name="maxParticipants"
+                placeholder="Maximum Participants"
+                min="1"
+                defaultValue="50"
+                disabled={creatingEvent}
+              />
+
+              <small
+                style={{
+                  display: "block",
+                  marginTop: "-8px",
+                  marginBottom: "15px",
+                  opacity: 0.8,
+                }}
+              >
+                Set the maximum number of students who can register.
+              </small>
 
               <button
                 type="submit"
@@ -896,6 +1022,10 @@ function CoordinatorDashboard() {
                       </th>
 
                       <th>
+                        Capacity
+                      </th>
+
+                      <th>
                         Action
                       </th>
 
@@ -941,8 +1071,18 @@ function CoordinatorDashboard() {
 
                         <td>
 
+                          <strong>
+                            {event.max_participants ||
+                              50}
+                          </strong>
+
+                        </td>
+
+                        <td>
+
                           <button
                             className="dashboard-btn"
+                            disabled={updatingEvent}
                             onClick={() =>
                               handleEdit(event)
                             }
@@ -1022,7 +1162,11 @@ function CoordinatorDashboard() {
                 Edit Event
               </h2>
 
-              <form onSubmit={handleUpdateEvent}>
+              <form
+                onSubmit={
+                  handleUpdateEvent
+                }
+              >
 
                 <input
                   type="text"
@@ -1085,6 +1229,34 @@ function CoordinatorDashboard() {
                     })
                   }
                 />
+
+                <input
+                  type="number"
+                  placeholder="Maximum Participants"
+                  min="1"
+                  value={
+                    editingEvent.max_participants
+                  }
+                  disabled={updatingEvent}
+                  onChange={(e) =>
+                    setEditingEvent({
+                      ...editingEvent,
+                      max_participants:
+                        e.target.value,
+                    })
+                  }
+                />
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "-8px",
+                    marginBottom: "15px",
+                    opacity: 0.8,
+                  }}
+                >
+                  Capacity cannot be lower than the current participant count.
+                </small>
 
                 <button
                   type="submit"
@@ -1149,79 +1321,107 @@ function CoordinatorDashboard() {
 
             ) : participants.length > 0 ? (
 
-              <div
-                style={{
-                  overflowX: "auto",
-                }}
-              >
+              <>
+                {/* ===============================
+                    EXPORT BUTTON
+                =============================== */}
 
-                <table
+                <div
                   style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    textAlign: "center",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginBottom: "20px",
                   }}
                 >
 
-                  <thead>
+                  <button
+                    type="button"
+                    className="dashboard-btn"
+                    onClick={
+                      exportParticipantsCSV
+                    }
+                  >
+                    Export Participants CSV
+                  </button>
 
-                    <tr>
+                </div>
 
-                      <th>
-                        Email
-                      </th>
+                <div
+                  style={{
+                    overflowX: "auto",
+                  }}
+                >
 
-                      <th>
-                        Event
-                      </th>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      textAlign: "center",
+                    }}
+                  >
 
-                      <th>
-                        Date
-                      </th>
+                    <thead>
 
-                      <th>
-                        Location
-                      </th>
+                      <tr>
 
-                    </tr>
+                        <th>
+                          Email
+                        </th>
 
-                  </thead>
+                        <th>
+                          Event
+                        </th>
 
-                  <tbody>
+                        <th>
+                          Date
+                        </th>
 
-                    {participants.map(
-                      (p, index) => (
+                        <th>
+                          Location
+                        </th>
 
-                        <tr key={index}>
+                      </tr>
 
-                          <td>
-                            {p.student_email}
-                          </td>
+                    </thead>
 
-                          <td>
-                            {p.event_name}
-                          </td>
+                    <tbody>
 
-                          <td>
-                            {formatDate(
-                              p.event_date
-                            )}
-                          </td>
+                      {participants.map(
+                        (p, index) => (
 
-                          <td>
-                            {p.event_location}
-                          </td>
+                          <tr
+                            key={index}
+                          >
 
-                        </tr>
+                            <td>
+                              {p.student_email}
+                            </td>
 
-                      )
-                    )}
+                            <td>
+                              {p.event_name}
+                            </td>
 
-                  </tbody>
+                            <td>
+                              {formatDate(
+                                p.event_date
+                              )}
+                            </td>
 
-                </table>
+                            <td>
+                              {p.event_location}
+                            </td>
 
-              </div>
+                          </tr>
+
+                        )
+                      )}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+              </>
 
             ) : (
 
