@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 // ===============================
-// WEEK 8 - VALIDATION HELPERS
+// VALIDATION HELPERS
 // ===============================
 
 function isValidEmail(email) {
@@ -27,6 +27,27 @@ function cleanText(value) {
 }
 
 // ===============================
+// GET TODAY'S DATE
+// YYYY-MM-DD
+// ===============================
+
+function getTodayDate() {
+  const today = new Date();
+
+  const year = today.getFullYear();
+
+  const month = String(
+    today.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    today.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+// ===============================
 // DATABASE CONNECTION
 // ===============================
 
@@ -40,9 +61,14 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
   if (err) {
-    console.log("Database connection failed:", err);
+    console.log(
+      "Database connection failed:",
+      err
+    );
   } else {
-    console.log("MySQL Database Connected Successfully!");
+    console.log(
+      "MySQL Database Connected Successfully!"
+    );
   }
 });
 
@@ -51,7 +77,9 @@ db.connect((err) => {
 // ===============================
 
 app.get("/", (req, res) => {
-  res.send("Campus Event Management Backend is Running");
+  res.send(
+    "Campus Event Management Backend is Running"
+  );
 });
 
 // ===============================
@@ -60,11 +88,25 @@ app.get("/", (req, res) => {
 
 app.post("/register", (req, res) => {
   const name = cleanText(req.body.name);
-  const email = cleanText(req.body.email).toLowerCase();
-  const password = cleanText(req.body.password);
-  const role = cleanText(req.body.role);
 
-  if (!name || !email || !password || !role) {
+  const email = cleanText(
+    req.body.email
+  ).toLowerCase();
+
+  const password = cleanText(
+    req.body.password
+  );
+
+  const role = cleanText(
+    req.body.role
+  );
+
+  if (
+    !name ||
+    !email ||
+    !password ||
+    !role
+  ) {
     return res.status(400).json({
       message: "Please fill all fields",
     });
@@ -72,26 +114,31 @@ app.post("/register", (req, res) => {
 
   if (!isValidEmail(email)) {
     return res.status(400).json({
-      message: "Please enter a valid email address",
+      message:
+        "Please enter a valid email address",
     });
   }
 
   if (name.length < 2) {
     return res.status(400).json({
-      message: "Name must contain at least 2 characters",
+      message:
+        "Name must contain at least 2 characters",
     });
   }
 
   if (password.length < 4) {
     return res.status(400).json({
-      message: "Password must contain at least 4 characters",
+      message:
+        "Password must contain at least 4 characters",
     });
   }
 
   if (
-    !["student", "coordinator", "admin"].includes(
-      role.toLowerCase()
-    )
+    ![
+      "student",
+      "coordinator",
+      "admin",
+    ].includes(role.toLowerCase())
   ) {
     return res.status(400).json({
       message: "Invalid user role",
@@ -103,7 +150,12 @@ app.post("/register", (req, res) => {
 
   db.query(
     sql,
-    [name, email, password, role],
+    [
+      name,
+      email,
+      password,
+      role,
+    ],
     (err) => {
       if (err) {
         console.log(err);
@@ -115,7 +167,8 @@ app.post("/register", (req, res) => {
       }
 
       res.json({
-        message: "Registration successful",
+        message:
+          "Registration successful",
       });
     }
   );
@@ -126,11 +179,23 @@ app.post("/register", (req, res) => {
 // ===============================
 
 app.post("/login", (req, res) => {
-  const email = cleanText(req.body.email).toLowerCase();
-  const password = cleanText(req.body.password);
-  const role = cleanText(req.body.role);
+  const email = cleanText(
+    req.body.email
+  ).toLowerCase();
 
-  if (!email || !password || !role) {
+  const password = cleanText(
+    req.body.password
+  );
+
+  const role = cleanText(
+    req.body.role
+  );
+
+  if (
+    !email ||
+    !password ||
+    !role
+  ) {
     return res.status(400).json({
       message: "Please fill all fields",
     });
@@ -138,7 +203,8 @@ app.post("/login", (req, res) => {
 
   if (!isValidEmail(email)) {
     return res.status(400).json({
-      message: "Please enter a valid email address",
+      message:
+        "Please enter a valid email address",
     });
   }
 
@@ -147,7 +213,11 @@ app.post("/login", (req, res) => {
 
   db.query(
     sql,
-    [email, password, role],
+    [
+      email,
+      password,
+      role,
+    ],
     (err, results) => {
       if (err) {
         console.log(err);
@@ -165,7 +235,8 @@ app.post("/login", (req, res) => {
       }
 
       res.json({
-        message: "Login successful",
+        message:
+          "Login successful",
         user: results[0],
       });
     }
@@ -176,393 +247,667 @@ app.post("/login", (req, res) => {
 // EVENT REGISTRATION API
 // ===============================
 
-app.post("/event-register", (req, res) => {
-  const student_email = cleanText(
-    req.body.student_email
-  ).toLowerCase();
+app.post(
+  "/event-register",
+  (req, res) => {
+    const student_email =
+      cleanText(
+        req.body.student_email
+      ).toLowerCase();
 
-  const event_name = cleanText(
-    req.body.event_name
-  );
+    const event_name =
+      cleanText(
+        req.body.event_name
+      );
 
-  const event_date = cleanText(
-    req.body.event_date
-  );
+    const event_date =
+      cleanText(
+        req.body.event_date
+      );
 
-  const event_location = cleanText(
-    req.body.event_location
-  );
+    const event_location =
+      cleanText(
+        req.body.event_location
+      );
 
-  if (
-    !student_email ||
-    !event_name ||
-    !event_date ||
-    !event_location
-  ) {
-    return res.status(400).json({
-      message:
-        "All event registration fields are required",
-    });
-  }
+    if (
+      !student_email ||
+      !event_name ||
+      !event_date ||
+      !event_location
+    ) {
+      return res.status(400).json({
+        message:
+          "All event registration fields are required",
+      });
+    }
 
-  if (!isValidEmail(student_email)) {
-    return res.status(400).json({
-      message:
-        "Please enter a valid student email",
-    });
-  }
+    if (
+      !isValidEmail(
+        student_email
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Please enter a valid student email",
+      });
+    }
 
-  if (isNaN(Date.parse(event_date))) {
-    return res.status(400).json({
-      message:
-        "Please provide a valid event date",
-    });
-  }
+    if (
+      isNaN(
+        Date.parse(event_date)
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Please provide a valid event date",
+      });
+    }
 
-  // =========================================
-  // FIND EVENT + GET MAX PARTICIPANT CAPACITY
-  // =========================================
+    // =========================================
+    // FIND EVENT + CAPACITY + DEADLINE
+    // =========================================
 
-  const eventSql = `
-    SELECT
-      event_id,
-      title,
-      status,
-      max_participants
-    FROM events
-    WHERE LOWER(TRIM(title)) = LOWER(TRIM(?))
-    LIMIT 1
-  `;
+    const eventSql = `
+      SELECT
+        event_id,
+        title,
+        status,
+        max_participants,
+        registration_deadline
+      FROM events
+      WHERE LOWER(TRIM(title)) =
+            LOWER(TRIM(?))
+      LIMIT 1
+    `;
 
-  db.query(
-    eventSql,
-    [event_name],
-    (err, eventResults) => {
-      if (err) {
-        console.log(err);
+    db.query(
+      eventSql,
+      [event_name],
+      (err, eventResults) => {
+        if (err) {
+          console.log(err);
 
-        return res.status(500).json({
-          message:
-            "Failed to check event details",
-        });
-      }
+          return res.status(500).json({
+            message:
+              "Failed to check event details",
+          });
+        }
 
-      if (eventResults.length === 0) {
-        return res.status(404).json({
-          message: "Event not found",
-        });
-      }
+        if (
+          eventResults.length === 0
+        ) {
+          return res.status(404).json({
+            message:
+              "Event not found",
+          });
+        }
 
-      const event = eventResults[0];
+        const event =
+          eventResults[0];
 
-      // =========================================
-      // ONLY APPROVED EVENTS CAN BE REGISTERED
-      // =========================================
+        // =========================================
+        // APPROVED EVENT CHECK
+        // =========================================
 
-      if (
-        String(event.status).toLowerCase() !==
-        "approved"
-      ) {
-        return res.status(400).json({
-          message:
-            "Registration is available only for approved events",
-        });
-      }
+        if (
+          String(
+            event.status
+          ).toLowerCase() !==
+          "approved"
+        ) {
+          return res.status(400).json({
+            message:
+              "Registration is available only for approved events",
+          });
+        }
 
-      // =========================================
-      // DUPLICATE REGISTRATION CHECK
-      // =========================================
+        // =========================================
+        // REGISTRATION DEADLINE CHECK
+        // =========================================
 
-      const checkSql = `
-        SELECT *
-        FROM event_registrations
-        WHERE LOWER(TRIM(student_email)) = LOWER(TRIM(?))
-        AND LOWER(TRIM(event_name)) = LOWER(TRIM(?))
-      `;
+        if (
+          event.registration_deadline
+        ) {
+          const today =
+            getTodayDate();
 
-      db.query(
-        checkSql,
-        [student_email, event.title],
-        (err, results) => {
-          if (err) {
-            console.log(err);
+          const deadline =
+            String(
+              event.registration_deadline
+            ).slice(0, 10);
 
-            return res.status(500).json({
-              message:
-                "Failed to check registration",
-            });
-          }
-
-          if (results.length > 0) {
+          if (
+            today > deadline
+          ) {
             return res.status(400).json({
               message:
-                "You are already registered for this event!",
+                "Registration deadline has passed.",
             });
           }
+        }
 
-          // =========================================
-          // CURRENT PARTICIPANT COUNT
-          // =========================================
+        // =========================================
+        // DUPLICATE REGISTRATION CHECK
+        // =========================================
 
-          const countSql = `
-            SELECT COUNT(*) AS participant_count
-            FROM event_registrations
-            WHERE LOWER(TRIM(event_name)) =
-                  LOWER(TRIM(?))
-          `;
+        const checkSql = `
+          SELECT *
+          FROM event_registrations
+          WHERE LOWER(TRIM(student_email)) =
+                LOWER(TRIM(?))
+          AND LOWER(TRIM(event_name)) =
+                LOWER(TRIM(?))
+        `;
 
-          db.query(
-            countSql,
-            [event.title],
-            (err, countResults) => {
-              if (err) {
-                console.log(err);
+        db.query(
+          checkSql,
+          [
+            student_email,
+            event.title,
+          ],
+          (err, results) => {
+            if (err) {
+              console.log(err);
 
-                return res.status(500).json({
-                  message:
-                    "Failed to check event capacity",
-                });
-              }
+              return res.status(500).json({
+                message:
+                  "Failed to check registration",
+              });
+            }
 
-              const currentParticipants =
-                Number(
-                  countResults[0].participant_count
-                ) || 0;
+            if (
+              results.length > 0
+            ) {
+              return res.status(400).json({
+                message:
+                  "You are already registered for this event!",
+              });
+            }
 
-              const maxParticipants =
-                Number(
-                  event.max_participants
-                ) || 50;
+            // =========================================
+            // CURRENT PARTICIPANT COUNT
+            // =========================================
 
-              // =========================================
-              // CAPACITY CHECK
-              // =========================================
+            const countSql = `
+              SELECT COUNT(*) AS participant_count
+              FROM event_registrations
+              WHERE LOWER(TRIM(event_name)) =
+                    LOWER(TRIM(?))
+            `;
 
-              if (
-                currentParticipants >=
-                maxParticipants
-              ) {
-                return res.status(400).json({
-                  message:
-                    `Registration closed. Maximum capacity of ${maxParticipants} participants has been reached.`,
-                });
-              }
+            db.query(
+              countSql,
+              [event.title],
+              (
+                err,
+                countResults
+              ) => {
+                if (err) {
+                  console.log(err);
 
-              // =========================================
-              // INSERT REGISTRATION
-              // =========================================
-
-              const insertSql = `
-                INSERT INTO event_registrations
-                (student_email, event_name, event_date, event_location)
-                VALUES (?, ?, ?, ?)
-              `;
-
-              db.query(
-                insertSql,
-                [
-                  student_email,
-                  event.title,
-                  event_date,
-                  event_location,
-                ],
-                (err) => {
-                  if (err) {
-                    console.log(err);
-
-                    return res.status(500).json({
-                      message:
-                        "Event registration failed",
-                    });
-                  }
-
-                  res.json({
+                  return res.status(500).json({
                     message:
-                      "Successfully registered for the event!",
+                      "Failed to check event capacity",
                   });
                 }
-              );
-            }
-          );
-        }
-      );
-    }
-  );
-});
+
+                const currentParticipants =
+                  Number(
+                    countResults[0]
+                      .participant_count
+                  ) || 0;
+
+                const maxParticipants =
+                  Number(
+                    event.max_participants
+                  ) || 50;
+
+                // =========================================
+                // CAPACITY CHECK
+                // =========================================
+
+                if (
+                  currentParticipants >=
+                  maxParticipants
+                ) {
+                  return res.status(400).json({
+                    message:
+                      `Registration closed. Maximum capacity of ${maxParticipants} participants has been reached.`,
+                  });
+                }
+
+                // =========================================
+                // INSERT REGISTRATION
+                // =========================================
+
+                const insertSql = `
+                  INSERT INTO event_registrations
+                  (
+                    student_email,
+                    event_name,
+                    event_date,
+                    event_location
+                  )
+                  VALUES (?, ?, ?, ?)
+                `;
+
+                db.query(
+                  insertSql,
+                  [
+                    student_email,
+                    event.title,
+                    event_date,
+                    event_location,
+                  ],
+                  (err) => {
+                    if (err) {
+                      console.log(err);
+
+                      return res.status(500).json({
+                        message:
+                          "Event registration failed",
+                      });
+                    }
+
+                    res.json({
+                      message:
+                        "Successfully registered for the event!",
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
+      }
+    );
+  }
+);
 
 // ===============================
 // CREATE EVENT API
 // ===============================
 
-app.post("/create-event", (req, res) => {
-  const coordinator_id =
-    req.body.coordinator_id;
+app.post(
+  "/create-event",
+  (req, res) => {
+    const coordinator_id =
+      req.body.coordinator_id;
 
-  const title = cleanText(req.body.title);
+    const title =
+      cleanText(
+        req.body.title
+      );
 
-  const description = cleanText(
-    req.body.description
-  );
+    const description =
+      cleanText(
+        req.body.description
+      );
 
-  const event_date = cleanText(
-    req.body.event_date
-  );
+    const event_date =
+      cleanText(
+        req.body.event_date
+      );
 
-  const venue = cleanText(req.body.venue);
+    const venue =
+      cleanText(
+        req.body.venue
+      );
 
-  // Default capacity = 50
-  const max_participants =
-    req.body.max_participants === undefined ||
-    req.body.max_participants === ""
-      ? 50
-      : Number(req.body.max_participants);
+    const category =
+      cleanText(
+        req.body.category
+      ) || "Other";
 
-  if (
-    !coordinator_id ||
-    !title ||
-    !description ||
-    !event_date ||
-    !venue
-  ) {
-    return res.status(400).json({
-      message: "Please fill all fields",
-    });
-  }
+    const max_participants =
+      req.body.max_participants ===
+        undefined ||
+      req.body.max_participants ===
+        ""
+        ? 50
+        : Number(
+            req.body.max_participants
+          );
 
-  if (!isValidId(coordinator_id)) {
-    return res.status(400).json({
-      message: "Invalid coordinator ID",
-    });
-  }
+    const registration_deadline =
+      cleanText(
+        req.body.registration_deadline
+      ) || null;
 
-  if (title.length < 3) {
-    return res.status(400).json({
-      message:
-        "Event title must contain at least 3 characters",
-    });
-  }
+    const allowedCategories = [
+      "Technical",
+      "Cultural",
+      "Sports",
+      "Workshop",
+      "Seminar",
+      "Other",
+    ];
 
-  if (description.length < 5) {
-    return res.status(400).json({
-      message:
-        "Event description must contain at least 5 characters",
-    });
-  }
+    if (
+      !coordinator_id ||
+      !title ||
+      !description ||
+      !event_date ||
+      !venue
+    ) {
+      return res.status(400).json({
+        message:
+          "Please fill all fields",
+      });
+    }
 
-  if (venue.length < 2) {
-    return res.status(400).json({
-      message: "Please enter a valid venue",
-    });
-  }
+    if (
+      !isValidId(
+        coordinator_id
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid coordinator ID",
+      });
+    }
 
-  if (isNaN(Date.parse(event_date))) {
-    return res.status(400).json({
-      message:
-        "Please provide a valid event date",
-    });
-  }
+    if (title.length < 3) {
+      return res.status(400).json({
+        message:
+          "Event title must contain at least 3 characters",
+      });
+    }
 
-  if (
-    !Number.isInteger(max_participants) ||
-    max_participants < 1
-  ) {
-    return res.status(400).json({
-      message:
-        "Maximum participants must be a positive whole number",
-    });
-  }
+    if (
+      description.length < 5
+    ) {
+      return res.status(400).json({
+        message:
+          "Event description must contain at least 5 characters",
+      });
+    }
 
-  const sql = `
-    INSERT INTO events
-    (
-      coordinator_id,
-      title,
-      description,
-      event_date,
-      venue,
-      status,
-      max_participants
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+    if (venue.length < 2) {
+      return res.status(400).json({
+        message:
+          "Please enter a valid venue",
+      });
+    }
 
-  db.query(
-    sql,
-    [
-      coordinator_id,
-      title,
-      description,
-      event_date,
-      venue,
-      "Pending",
-      max_participants,
-    ],
-    (err) => {
-      if (err) {
-        console.log(err);
+    if (
+      isNaN(
+        Date.parse(event_date)
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Please provide a valid event date",
+      });
+    }
 
-        return res.status(500).json({
-          message: "Event creation failed",
+    if (
+      !allowedCategories.includes(
+        category
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid event category",
+      });
+    }
+
+    if (
+      !Number.isInteger(
+        max_participants
+      ) ||
+      max_participants < 1
+    ) {
+      return res.status(400).json({
+        message:
+          "Maximum participants must be a positive whole number",
+      });
+    }
+
+    // =========================================
+    // REGISTRATION DEADLINE VALIDATION
+    // =========================================
+
+    if (
+      registration_deadline
+    ) {
+      const deadlineDate =
+        new Date(
+          registration_deadline
+        );
+
+      if (
+        isNaN(
+          deadlineDate.getTime()
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid registration deadline",
         });
       }
 
-      res.json({
-        message:
-          "Event created successfully",
-      });
+      if (
+        new Date(
+          registration_deadline
+        ) >
+        new Date(event_date)
+      ) {
+        return res.status(400).json({
+          message:
+            "Registration deadline cannot be after the event date",
+        });
+      }
     }
-  );
-});
+
+    const sql = `
+      INSERT INTO events
+      (
+        coordinator_id,
+        title,
+        description,
+        event_date,
+        venue,
+        status,
+        max_participants,
+        category,
+        registration_deadline
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(
+      sql,
+      [
+        coordinator_id,
+        title,
+        description,
+        event_date,
+        venue,
+        "Pending",
+        max_participants,
+        category,
+        registration_deadline,
+      ],
+      (err) => {
+        if (err) {
+          console.log(err);
+
+          return res.status(500).json({
+            message:
+              "Event creation failed",
+          });
+        }
+
+        res.json({
+          message:
+            "Event created successfully",
+        });
+      }
+    );
+  }
+);
+
+// ===============================================
+// EVENT CAPACITY / SEAT AVAILABILITY
+// ===============================================
+
+app.get(
+  "/event-capacity",
+  (req, res) => {
+    const sql = `
+      SELECT
+        e.event_id,
+        e.title AS event_name,
+        e.max_participants,
+        COUNT(er.student_email) AS participant_count
+      FROM events e
+      LEFT JOIN event_registrations er
+        ON LOWER(TRIM(er.event_name)) =
+           LOWER(TRIM(e.title))
+      GROUP BY
+        e.event_id,
+        e.title,
+        e.max_participants
+      ORDER BY e.event_id ASC
+    `;
+
+    db.query(
+      sql,
+      (err, results) => {
+        if (err) {
+          console.log(err);
+
+          return res.status(500).json({
+            message:
+              "Failed to fetch event capacity data",
+          });
+        }
+
+        const updatedResults =
+          results.map(
+            (event) => {
+              const maxParticipants =
+                Number(
+                  event.max_participants
+                ) || 50;
+
+              const participantCount =
+                Number(
+                  event.participant_count
+                ) || 0;
+
+              const remainingSeats =
+                Math.max(
+                  maxParticipants -
+                    participantCount,
+                  0
+                );
+
+              const progressPercentage =
+                Math.min(
+                  Math.round(
+                    (
+                      participantCount /
+                      maxParticipants
+                    ) * 100
+                  ),
+                  100
+                );
+
+              return {
+                event_id:
+                  event.event_id,
+
+                event_name:
+                  event.event_name,
+
+                max_participants:
+                  maxParticipants,
+
+                participant_count:
+                  participantCount,
+
+                remaining_seats:
+                  remainingSeats,
+
+                progress_percentage:
+                  progressPercentage,
+              };
+            }
+          );
+
+        res.json(
+          updatedResults
+        );
+      }
+    );
+  }
+);
 
 // ===============================
 // GET ALL EVENTS API
 // ===============================
 
-app.get("/events", (req, res) => {
-  const sql = `
-    SELECT *
-    FROM events
-    ORDER BY event_date ASC
-  `;
+app.get(
+  "/events",
+  (req, res) => {
+    const sql = `
+      SELECT *
+      FROM events
+      ORDER BY event_date ASC
+    `;
 
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.log(err);
+    db.query(
+      sql,
+      (err, results) => {
+        if (err) {
+          console.log(err);
 
-      return res.status(500).json({
-        message: "Failed to fetch events",
-      });
-    }
+          return res.status(500).json({
+            message:
+              "Failed to fetch events",
+          });
+        }
 
-    res.json(results);
-  });
-});
+        res.json(results);
+      }
+    );
+  }
+);
 
 // ==================================================
 // ADMIN: GET PENDING EVENTS
 // ==================================================
 
-app.get("/admin/events", (req, res) => {
-  const sql = `
-    SELECT *
-    FROM events
-    WHERE LOWER(status) = 'pending'
-    ORDER BY event_id DESC
-  `;
+app.get(
+  "/admin/events",
+  (req, res) => {
+    const sql = `
+      SELECT *
+      FROM events
+      WHERE LOWER(status) = 'pending'
+      ORDER BY event_id DESC
+    `;
 
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.log(err);
+    db.query(
+      sql,
+      (err, results) => {
+        if (err) {
+          console.log(err);
 
-      return res.status(500).json({
-        message:
-          "Failed to fetch pending events",
-      });
-    }
+          return res.status(500).json({
+            message:
+              "Failed to fetch pending events",
+          });
+        }
 
-    res.json(results);
-  });
-});
+        res.json(results);
+      }
+    );
+  }
+);
 
 // ==================================================
 // ADMIN: APPROVE / REJECT EVENT
@@ -571,12 +916,18 @@ app.get("/admin/events", (req, res) => {
 app.put(
   "/admin/events/:id/status",
   (req, res) => {
-    const eventId = req.params.id;
-    const { status } = req.body;
+    const eventId =
+      req.params.id;
 
-    if (!isValidId(eventId)) {
+    const { status } =
+      req.body;
+
+    if (
+      !isValidId(eventId)
+    ) {
       return res.status(400).json({
-        message: "Invalid event ID",
+        message:
+          "Invalid event ID",
       });
     }
 
@@ -592,7 +943,8 @@ app.put(
 
     if (!status) {
       return res.status(400).json({
-        message: "Status is required",
+        message:
+          "Status is required",
       });
     }
 
@@ -601,7 +953,8 @@ app.put(
       status !== "Rejected"
     ) {
       return res.status(400).json({
-        message: "Invalid status",
+        message:
+          "Invalid status",
       });
     }
 
@@ -613,7 +966,10 @@ app.put(
 
     db.query(
       sql,
-      [status, eventId],
+      [
+        status,
+        eventId,
+      ],
       (err, result) => {
         if (err) {
           console.log(
@@ -632,14 +988,19 @@ app.put(
           result
         );
 
-        if (result.affectedRows === 0) {
+        if (
+          result.affectedRows ===
+          0
+        ) {
           return res.status(404).json({
-            message: "Event not found",
+            message:
+              "Event not found",
           });
         }
 
         res.json({
-          message: `Event ${status.toLowerCase()} successfully`,
+          message:
+            `Event ${status.toLowerCase()} successfully`,
         });
       }
     );
@@ -650,25 +1011,32 @@ app.put(
 // MANAGE EVENTS - ALL EVENTS
 // ===============================
 
-app.get("/manage-events", (req, res) => {
-  const sql = `
-    SELECT *
-    FROM events
-    ORDER BY event_id DESC
-  `;
+app.get(
+  "/manage-events",
+  (req, res) => {
+    const sql = `
+      SELECT *
+      FROM events
+      ORDER BY event_id DESC
+    `;
 
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.log(err);
+    db.query(
+      sql,
+      (err, results) => {
+        if (err) {
+          console.log(err);
 
-      return res.status(500).json({
-        message: "Failed to fetch events",
-      });
-    }
+          return res.status(500).json({
+            message:
+              "Failed to fetch events",
+          });
+        }
 
-    res.json(results);
-  });
-});
+        res.json(results);
+      }
+    );
+  }
+);
 
 // ===============================================
 // COORDINATOR: GET OWN EVENTS
@@ -680,7 +1048,11 @@ app.get(
     const coordinatorId =
       req.params.id;
 
-    if (!isValidId(coordinatorId)) {
+    if (
+      !isValidId(
+        coordinatorId
+      )
+    ) {
       return res.status(400).json({
         message:
           "Invalid coordinator ID",
@@ -720,19 +1092,27 @@ app.get(
 app.delete(
   "/delete-event/:id",
   (req, res) => {
-    const id = req.params.id;
+    const id =
+      req.params.id;
+
     const coordinatorId =
       req.body.coordinator_id;
 
     if (!isValidId(id)) {
       return res.status(400).json({
-        message: "Invalid event ID",
+        message:
+          "Invalid event ID",
       });
     }
 
-    if (!isValidId(coordinatorId)) {
+    if (
+      !isValidId(
+        coordinatorId
+      )
+    ) {
       return res.status(400).json({
-        message: "Invalid coordinator ID",
+        message:
+          "Invalid coordinator ID",
       });
     }
 
@@ -744,7 +1124,10 @@ app.delete(
 
     db.query(
       sql,
-      [id, coordinatorId],
+      [
+        id,
+        coordinatorId,
+      ],
       (err, result) => {
         if (err) {
           console.log(err);
@@ -755,7 +1138,10 @@ app.delete(
           });
         }
 
-        if (result.affectedRows === 0) {
+        if (
+          result.affectedRows ===
+          0
+        ) {
           return res.status(404).json({
             message:
               "Event not found or you are not authorized to delete it",
@@ -772,49 +1158,86 @@ app.delete(
 );
 
 // ===============================
-// WEEK 7 - UPDATE EVENT API
+// UPDATE EVENT API
 // ===============================
 
 app.put(
   "/update-event/:id",
   (req, res) => {
-    const eventId = req.params.id;
+    const eventId =
+      req.params.id;
+
     const coordinatorId =
       req.body.coordinator_id;
 
-    if (!isValidId(eventId)) {
+    if (
+      !isValidId(eventId)
+    ) {
       return res.status(400).json({
-        message: "Invalid event ID",
+        message:
+          "Invalid event ID",
       });
     }
 
-    if (!isValidId(coordinatorId)) {
+    if (
+      !isValidId(
+        coordinatorId
+      )
+    ) {
       return res.status(400).json({
-        message: "Invalid coordinator ID",
+        message:
+          "Invalid coordinator ID",
       });
     }
 
-    const title = cleanText(
-      req.body.title
-    );
+    const title =
+      cleanText(
+        req.body.title
+      );
 
-    const description = cleanText(
-      req.body.description
-    );
+    const description =
+      cleanText(
+        req.body.description
+      );
 
-    const event_date = cleanText(
-      req.body.event_date
-    );
+    const event_date =
+      cleanText(
+        req.body.event_date
+      );
 
-    const venue = cleanText(
-      req.body.venue
-    );
+    const venue =
+      cleanText(
+        req.body.venue
+      );
+
+    const category =
+      cleanText(
+        req.body.category
+      ) || "Other";
 
     const max_participants =
-      req.body.max_participants === undefined ||
-      req.body.max_participants === ""
+      req.body.max_participants ===
+        undefined ||
+      req.body.max_participants ===
+        ""
         ? 50
-        : Number(req.body.max_participants);
+        : Number(
+            req.body.max_participants
+          );
+
+    const registration_deadline =
+      cleanText(
+        req.body.registration_deadline
+      ) || null;
+
+    const allowedCategories = [
+      "Technical",
+      "Cultural",
+      "Sports",
+      "Workshop",
+      "Seminar",
+      "Other",
+    ];
 
     if (
       !title ||
@@ -823,7 +1246,8 @@ app.put(
       !venue
     ) {
       return res.status(400).json({
-        message: "Please fill all fields",
+        message:
+          "Please fill all fields",
       });
     }
 
@@ -834,7 +1258,9 @@ app.put(
       });
     }
 
-    if (description.length < 5) {
+    if (
+      description.length < 5
+    ) {
       return res.status(400).json({
         message:
           "Event description must contain at least 5 characters",
@@ -843,11 +1269,16 @@ app.put(
 
     if (venue.length < 2) {
       return res.status(400).json({
-        message: "Please enter a valid venue",
+        message:
+          "Please enter a valid venue",
       });
     }
 
-    if (isNaN(Date.parse(event_date))) {
+    if (
+      isNaN(
+        Date.parse(event_date)
+      )
+    ) {
       return res.status(400).json({
         message:
           "Please provide a valid event date",
@@ -855,13 +1286,62 @@ app.put(
     }
 
     if (
-      !Number.isInteger(max_participants) ||
+      !allowedCategories.includes(
+        category
+      )
+    ) {
+      return res.status(400).json({
+        message:
+          "Invalid event category",
+      });
+    }
+
+    if (
+      !Number.isInteger(
+        max_participants
+      ) ||
       max_participants < 1
     ) {
       return res.status(400).json({
         message:
           "Maximum participants must be a positive whole number",
       });
+    }
+
+    // =========================================
+    // DEADLINE VALIDATION
+    // =========================================
+
+    if (
+      registration_deadline
+    ) {
+      const deadlineDate =
+        new Date(
+          registration_deadline
+        );
+
+      if (
+        isNaN(
+          deadlineDate.getTime()
+        )
+      ) {
+        return res.status(400).json({
+          message:
+            "Invalid registration deadline",
+        });
+      }
+
+      if (
+        new Date(
+          registration_deadline
+        ) >
+        new Date(event_date)
+      ) {
+        return res.status(400).json({
+          message:
+            "Registration deadline cannot be after the event date",
+        });
+      }
     }
 
     // =========================================
@@ -878,8 +1358,14 @@ app.put(
 
     db.query(
       currentEventSql,
-      [eventId, coordinatorId],
-      (err, eventResults) => {
+      [
+        eventId,
+        coordinatorId,
+      ],
+      (
+        err,
+        eventResults
+      ) => {
         if (err) {
           console.log(err);
 
@@ -889,7 +1375,10 @@ app.put(
           });
         }
 
-        if (eventResults.length === 0) {
+        if (
+          eventResults.length ===
+          0
+        ) {
           return res.status(404).json({
             message:
               "Event not found or you are not authorized to update it",
@@ -897,7 +1386,7 @@ app.put(
         }
 
         // =========================================
-        // CHECK CURRENT PARTICIPANT COUNT
+        // CHECK PARTICIPANT COUNT
         // =========================================
 
         const countSql = `
@@ -910,7 +1399,10 @@ app.put(
         db.query(
           countSql,
           [eventResults[0].title],
-          (err, countResults) => {
+          (
+            err,
+            countResults
+          ) => {
             if (err) {
               console.log(err);
 
@@ -922,7 +1414,8 @@ app.put(
 
             const currentParticipants =
               Number(
-                countResults[0].participant_count
+                countResults[0]
+                  .participant_count
               ) || 0;
 
             // =========================================
@@ -939,6 +1432,10 @@ app.put(
               });
             }
 
+            // =========================================
+            // UPDATE EVENT
+            // =========================================
+
             const sql = `
               UPDATE events
               SET
@@ -946,7 +1443,9 @@ app.put(
                 description = ?,
                 event_date = ?,
                 venue = ?,
-                max_participants = ?
+                max_participants = ?,
+                category = ?,
+                registration_deadline = ?
               WHERE
                 event_id = ?
                 AND coordinator_id = ?
@@ -960,10 +1459,15 @@ app.put(
                 event_date,
                 venue,
                 max_participants,
+                category,
+                registration_deadline,
                 eventId,
                 coordinatorId,
               ],
-              (err, result) => {
+              (
+                err,
+                result
+              ) => {
                 if (err) {
                   console.log(
                     "UPDATE EVENT ERROR:",
@@ -976,7 +1480,10 @@ app.put(
                   });
                 }
 
-                if (result.affectedRows === 0) {
+                if (
+                  result.affectedRows ===
+                  0
+                ) {
                   return res.status(404).json({
                     message:
                       "Event not found or you are not authorized to update it",
@@ -1040,7 +1547,11 @@ app.get(
     const coordinatorId =
       req.params.id;
 
-    if (!isValidId(coordinatorId)) {
+    if (
+      !isValidId(
+        coordinatorId
+      )
+    ) {
       return res.status(400).json({
         message:
           "Invalid coordinator ID",
@@ -1055,7 +1566,8 @@ app.get(
         er.event_location
       FROM event_registrations er
       INNER JOIN events e
-        ON er.event_name = e.title
+        ON LOWER(TRIM(er.event_name)) =
+           LOWER(TRIM(e.title))
       WHERE e.coordinator_id = ?
       ORDER BY er.event_date ASC
     `;
@@ -1095,6 +1607,8 @@ app.get(
         e.status,
         e.coordinator_id,
         e.max_participants,
+        e.category,
+        e.registration_deadline,
         COUNT(er.student_email) AS participant_count
       FROM events e
       LEFT JOIN event_registrations er
@@ -1107,7 +1621,9 @@ app.get(
         e.venue,
         e.status,
         e.coordinator_id,
-        e.max_participants
+        e.max_participants,
+        e.category,
+        e.registration_deadline
       ORDER BY e.event_date ASC
     `;
 
@@ -1124,6 +1640,192 @@ app.get(
         }
 
         res.json(results);
+      }
+    );
+  }
+);
+
+// ===============================================
+// WEEK 15: ADMIN ANALYTICS
+// ===============================================
+
+app.get(
+  "/admin/analytics",
+  (req, res) => {
+    const analytics = {};
+
+    // ===============================
+    // EVENT STATUS SUMMARY
+    // ===============================
+
+    const statusSql = `
+      SELECT
+        status,
+        COUNT(*) AS count
+      FROM events
+      GROUP BY status
+      ORDER BY count DESC
+    `;
+
+    // ===============================
+    // CATEGORY-WISE EVENTS
+    // ===============================
+
+    const categorySql = `
+      SELECT
+        COALESCE(category, 'Other') AS category,
+        COUNT(*) AS count
+      FROM events
+      GROUP BY category
+      ORDER BY count DESC
+    `;
+
+    // ===============================
+    // TOTAL PARTICIPANTS
+    // ===============================
+
+    const participantSql = `
+      SELECT
+        COUNT(*) AS total
+      FROM event_registrations
+    `;
+
+    // ===============================
+    // EVENT-WISE PARTICIPANTS
+    // ===============================
+
+    const eventParticipantSql = `
+      SELECT
+        e.event_id,
+        e.title AS event_name,
+        COUNT(er.student_email) AS participant_count,
+        e.max_participants
+      FROM events e
+      LEFT JOIN event_registrations er
+        ON LOWER(TRIM(er.event_name)) =
+           LOWER(TRIM(e.title))
+      GROUP BY
+        e.event_id,
+        e.title,
+        e.max_participants
+      ORDER BY participant_count DESC
+    `;
+
+    // ===============================
+    // STATUS QUERY
+    // ===============================
+
+    db.query(
+      statusSql,
+      (err, statusResults) => {
+        if (err) {
+          console.log(err);
+
+          return res.status(500).json({
+            message:
+              "Failed to fetch event status analytics",
+          });
+        }
+
+        analytics.status =
+          statusResults;
+
+        // ===============================
+        // CATEGORY QUERY
+        // ===============================
+
+        db.query(
+          categorySql,
+          (
+            err,
+            categoryResults
+          ) => {
+            if (err) {
+              console.log(err);
+
+              return res.status(500).json({
+                message:
+                  "Failed to fetch category analytics",
+              });
+            }
+
+            analytics.categories =
+              categoryResults;
+
+            // ===============================
+            // TOTAL PARTICIPANTS QUERY
+            // ===============================
+
+            db.query(
+              participantSql,
+              (
+                err,
+                participantResults
+              ) => {
+                if (err) {
+                  console.log(err);
+
+                  return res.status(500).json({
+                    message:
+                      "Failed to fetch participant analytics",
+                  });
+                }
+
+                analytics.totalParticipants =
+                  Number(
+                    participantResults[0]
+                      .total
+                  ) || 0;
+
+                // ===============================
+                // EVENT PARTICIPANTS QUERY
+                // ===============================
+
+                db.query(
+                  eventParticipantSql,
+                  (
+                    err,
+                    eventParticipantResults
+                  ) => {
+                    if (err) {
+                      console.log(err);
+
+                      return res.status(500).json({
+                        message:
+                          "Failed to fetch event participant analytics",
+                      });
+                    }
+
+                    analytics.eventParticipants =
+                      eventParticipantResults.map(
+                        (event) => ({
+                          event_id:
+                            event.event_id,
+
+                          event_name:
+                            event.event_name,
+
+                          participant_count:
+                            Number(
+                              event.participant_count
+                            ) || 0,
+
+                          max_participants:
+                            Number(
+                              event.max_participants
+                            ) || 50,
+                        })
+                      );
+
+                    res.json(
+                      analytics
+                    );
+                  }
+                );
+              }
+            );
+          }
+        );
       }
     );
   }
@@ -1182,11 +1884,14 @@ app.get(
 app.get(
   "/my-registrations/:email",
   (req, res) => {
-    const email = cleanText(
-      req.params.email
-    ).toLowerCase();
+    const email =
+      cleanText(
+        req.params.email
+      ).toLowerCase();
 
-    if (!isValidEmail(email)) {
+    if (
+      !isValidEmail(email)
+    ) {
       return res.status(400).json({
         message:
           "Invalid email address",
@@ -1229,11 +1934,14 @@ app.get(
 app.get(
   "/my-certificates/:email",
   (req, res) => {
-    const email = cleanText(
-      req.params.email
-    ).toLowerCase();
+    const email =
+      cleanText(
+        req.params.email
+      ).toLowerCase();
 
-    if (!isValidEmail(email)) {
+    if (
+      !isValidEmail(email)
+    ) {
       return res.status(400).json({
         message:
           "Invalid email address",
@@ -1274,7 +1982,7 @@ app.get(
 );
 
 // ==================================================
-// WEEK 5 - ADMIN REPORTS
+// ADMIN REPORTS
 // ==================================================
 
 app.get(
@@ -1394,7 +2102,10 @@ app.get(
 
                         db.query(
                           queries.totalParticipants,
-                          (err, result) => {
+                          (
+                            err,
+                            result
+                          ) => {
                             if (err) {
                               console.log(err);
 
@@ -1407,7 +2118,9 @@ app.get(
                             report.totalParticipants =
                               result[0].total;
 
-                            res.json(report);
+                            res.json(
+                              report
+                            );
                           }
                         );
                       }

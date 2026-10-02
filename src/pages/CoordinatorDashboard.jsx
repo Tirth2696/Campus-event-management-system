@@ -157,6 +157,16 @@ function CoordinatorDashboard() {
   };
 
   // ===============================
+  // FORMAT DATE
+  // ===============================
+
+  const formatDate = (date) => {
+    if (!date) return "";
+
+    return new Date(date).toLocaleDateString();
+  };
+
+  // ===============================
   // CREATE EVENT
   // ===============================
 
@@ -167,14 +177,20 @@ function CoordinatorDashboard() {
       return;
     }
 
-    const title = e.target.title.value.trim();
+    const title =
+      e.target.title.value.trim();
 
     const description =
       e.target.description.value.trim();
 
-    const eventDate = e.target.eventDate.value;
+    const eventDate =
+      e.target.eventDate.value;
 
-    const venue = e.target.venue.value.trim();
+    const venue =
+      e.target.venue.value.trim();
+
+    const category =
+      e.target.category.value;
 
     const maxParticipantsValue =
       e.target.maxParticipants.value;
@@ -182,7 +198,15 @@ function CoordinatorDashboard() {
     const maxParticipants =
       Number(maxParticipantsValue);
 
-    const coordinatorId = getCoordinatorId();
+    const registrationDeadline =
+      e.target.registrationDeadline.value;
+
+    const coordinatorId =
+      getCoordinatorId();
+
+    // ===============================
+    // COORDINATOR VALIDATION
+    // ===============================
 
     if (!coordinatorId) {
       alert(
@@ -191,16 +215,26 @@ function CoordinatorDashboard() {
       return;
     }
 
+    // ===============================
+    // REQUIRED FIELD VALIDATION
+    // ===============================
+
     if (
       !title ||
       !description ||
       !eventDate ||
       !venue ||
-      !maxParticipantsValue
+      !category ||
+      !maxParticipantsValue ||
+      !registrationDeadline
     ) {
       alert("Please fill all fields");
       return;
     }
+
+    // ===============================
+    // TITLE VALIDATION
+    // ===============================
 
     if (title.length < 3) {
       alert(
@@ -209,6 +243,10 @@ function CoordinatorDashboard() {
       return;
     }
 
+    // ===============================
+    // DESCRIPTION VALIDATION
+    // ===============================
+
     if (description.length < 5) {
       alert(
         "Event description must contain at least 5 characters"
@@ -216,15 +254,60 @@ function CoordinatorDashboard() {
       return;
     }
 
+    // ===============================
+    // VENUE VALIDATION
+    // ===============================
+
     if (venue.length < 2) {
       alert("Please enter a valid venue");
       return;
     }
 
+    // ===============================
+    // EVENT DATE VALIDATION
+    // ===============================
+
     if (isNaN(Date.parse(eventDate))) {
-      alert("Please provide a valid event date");
+      alert(
+        "Please provide a valid event date"
+      );
       return;
     }
+
+    // ===============================
+    // REGISTRATION DEADLINE VALIDATION
+    // ===============================
+
+    if (
+      isNaN(
+        Date.parse(
+          registrationDeadline
+        )
+      )
+    ) {
+      alert(
+        "Please provide a valid registration deadline"
+      );
+      return;
+    }
+
+    // ===============================
+    // DEADLINE CANNOT BE AFTER EVENT DATE
+    // ===============================
+
+    if (
+      new Date(registrationDeadline) >
+      new Date(eventDate)
+    ) {
+      alert(
+        "Registration deadline cannot be after the event date"
+      );
+      return;
+    }
+
+    // ===============================
+    // CAPACITY VALIDATION
+    // ===============================
 
     if (
       !Number.isInteger(maxParticipants) ||
@@ -244,22 +327,39 @@ function CoordinatorDashboard() {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             coordinator_id:
               Number(coordinatorId),
-            title: title,
-            description: description,
-            event_date: eventDate,
-            venue: venue,
+
+            title:
+              title,
+
+            description:
+              description,
+
+            event_date:
+              eventDate,
+
+            venue:
+              venue,
+
+            category:
+              category,
+
             max_participants:
               maxParticipants,
+
+            registration_deadline:
+              registrationDeadline,
           }),
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       alert(
         data.message ||
@@ -268,6 +368,7 @@ function CoordinatorDashboard() {
 
       if (response.ok) {
         e.target.reset();
+
         setShowForm(false);
 
         fetchEvents();
@@ -290,18 +391,41 @@ function CoordinatorDashboard() {
 
   const handleEdit = (event) => {
     setEditingEvent({
-      event_id: event.event_id,
-      title: event.title,
-      description: event.description,
+      event_id:
+        event.event_id,
 
-      event_date: event.event_date
-        ? event.event_date.substring(0, 10)
-        : "",
+      title:
+        event.title || "",
 
-      venue: event.venue,
+      description:
+        event.description || "",
+
+      event_date:
+        event.event_date
+          ? event.event_date.substring(
+              0,
+              10
+            )
+          : "",
+
+      venue:
+        event.venue || "",
+
+      category:
+        event.category ||
+        "Other",
 
       max_participants:
-        event.max_participants || 50,
+        event.max_participants ||
+        50,
+
+      registration_deadline:
+        event.registration_deadline
+          ? event.registration_deadline.substring(
+              0,
+              10
+            )
+          : "",
     });
 
     setShowEditForm(true);
@@ -321,7 +445,8 @@ function CoordinatorDashboard() {
       return;
     }
 
-    const coordinatorId = getCoordinatorId();
+    const coordinatorId =
+      getCoordinatorId();
 
     if (!coordinatorId) {
       alert(
@@ -335,25 +460,42 @@ function CoordinatorDashboard() {
       !editingEvent.description ||
       !editingEvent.event_date ||
       !editingEvent.venue ||
-      !editingEvent.max_participants
+      !editingEvent.category ||
+      !editingEvent.max_participants ||
+      !editingEvent.registration_deadline
     ) {
       alert("Please fill all fields");
       return;
     }
 
-    const maxParticipants = Number(
-      editingEvent.max_participants
-    );
+    const maxParticipants =
+      Number(
+        editingEvent.max_participants
+      );
 
-    if (editingEvent.title.trim().length < 3) {
+    // ===============================
+    // TITLE VALIDATION
+    // ===============================
+
+    if (
+      editingEvent.title
+        .trim()
+        .length < 3
+    ) {
       alert(
         "Event title must contain at least 3 characters"
       );
       return;
     }
 
+    // ===============================
+    // DESCRIPTION VALIDATION
+    // ===============================
+
     if (
-      editingEvent.description.trim().length < 5
+      editingEvent.description
+        .trim()
+        .length < 5
     ) {
       alert(
         "Event description must contain at least 5 characters"
@@ -361,16 +503,41 @@ function CoordinatorDashboard() {
       return;
     }
 
+    // ===============================
+    // VENUE VALIDATION
+    // ===============================
+
     if (
-      editingEvent.venue.trim().length < 2
+      editingEvent.venue
+        .trim()
+        .length < 2
     ) {
-      alert("Please enter a valid venue");
+      alert(
+        "Please enter a valid venue"
+      );
       return;
     }
 
+    // ===============================
+    // CATEGORY VALIDATION
+    // ===============================
+
+    if (!editingEvent.category) {
+      alert(
+        "Please select an event category"
+      );
+      return;
+    }
+
+    // ===============================
+    // EVENT DATE VALIDATION
+    // ===============================
+
     if (
       isNaN(
-        Date.parse(editingEvent.event_date)
+        Date.parse(
+          editingEvent.event_date
+        )
       )
     ) {
       alert(
@@ -378,6 +545,46 @@ function CoordinatorDashboard() {
       );
       return;
     }
+
+    // ===============================
+    // DEADLINE VALIDATION
+    // ===============================
+
+    if (
+      !editingEvent.registration_deadline ||
+      isNaN(
+        Date.parse(
+          editingEvent.registration_deadline
+        )
+      )
+    ) {
+      alert(
+        "Please provide a valid registration deadline"
+      );
+      return;
+    }
+
+    // ===============================
+    // DEADLINE CANNOT BE AFTER EVENT DATE
+    // ===============================
+
+    if (
+      new Date(
+        editingEvent.registration_deadline
+      ) >
+      new Date(
+        editingEvent.event_date
+      )
+    ) {
+      alert(
+        "Registration deadline cannot be after the event date"
+      );
+      return;
+    }
+
+    // ===============================
+    // CAPACITY VALIDATION
+    // ===============================
 
     if (
       !Number.isInteger(maxParticipants) ||
@@ -397,7 +604,8 @@ function CoordinatorDashboard() {
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             coordinator_id:
@@ -415,13 +623,20 @@ function CoordinatorDashboard() {
             venue:
               editingEvent.venue.trim(),
 
+            category:
+              editingEvent.category,
+
             max_participants:
               maxParticipants,
+
+            registration_deadline:
+              editingEvent.registration_deadline,
           }),
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       alert(
         data.message ||
@@ -459,7 +674,8 @@ function CoordinatorDashboard() {
       return;
     }
 
-    const coordinatorId = getCoordinatorId();
+    const coordinatorId =
+      getCoordinatorId();
 
     if (!coordinatorId) {
       alert(
@@ -474,7 +690,8 @@ function CoordinatorDashboard() {
         {
           method: "DELETE",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             coordinator_id:
@@ -483,7 +700,8 @@ function CoordinatorDashboard() {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       alert(
         data.message ||
@@ -532,10 +750,18 @@ function CoordinatorDashboard() {
 
     const rows = participants.map(
       (participant) => [
-        participant.student_email || "",
-        participant.event_name || "",
-        formatDate(participant.event_date),
-        participant.event_location || "",
+        participant.student_email ||
+          "",
+
+        participant.event_name ||
+          "",
+
+        formatDate(
+          participant.event_date
+        ),
+
+        participant.event_location ||
+          "",
       ]
     );
 
@@ -543,22 +769,27 @@ function CoordinatorDashboard() {
       headers,
       ...rows,
     ]
-      .map((row) =>
-        row
-          .map((value) =>
-            `"${String(value).replace(
-              /"/g,
-              '""'
-            )}"`
-          )
-          .join(",")
+      .map(
+        (row) =>
+          row
+            .map(
+              (value) =>
+                `"${String(
+                  value
+                ).replace(
+                  /"/g,
+                  '""'
+                )}"`
+            )
+            .join(",")
       )
       .join("\n");
 
     const blob = new Blob(
       [csvContent],
       {
-        type: "text/csv;charset=utf-8;",
+        type:
+          "text/csv;charset=utf-8;",
       }
     );
 
@@ -584,18 +815,6 @@ function CoordinatorDashboard() {
     alert(
       "Participant data exported successfully!"
     );
-  };
-
-  // ===============================
-  // FORMAT DATE
-  // ===============================
-
-  const formatDate = (date) => {
-    if (!date) return "";
-
-    return new Date(
-      date
-    ).toLocaleDateString();
   };
 
   return (
@@ -681,6 +900,7 @@ function CoordinatorDashboard() {
 
           </div>
 
+
           <div className="dashboard-card">
 
             <div
@@ -708,6 +928,7 @@ function CoordinatorDashboard() {
 
           </div>
 
+
           <div className="dashboard-card">
 
             <div
@@ -734,6 +955,7 @@ function CoordinatorDashboard() {
             </p>
 
           </div>
+
 
           <div className="dashboard-card">
 
@@ -783,14 +1005,13 @@ function CoordinatorDashboard() {
             <button
               className="dashboard-btn"
               onClick={() => {
-                setShowForm(!showForm);
+                setShowForm(
+                  !showForm
+                );
 
                 setShowManage(false);
-
                 setShowParticipants(false);
-
                 setShowEditForm(false);
-
                 setEditingEvent(null);
               }}
             >
@@ -798,6 +1019,7 @@ function CoordinatorDashboard() {
             </button>
 
           </div>
+
 
           <div className="dashboard-card">
 
@@ -815,14 +1037,13 @@ function CoordinatorDashboard() {
                 fetchEvents();
                 fetchParticipants();
 
-                setShowManage(!showManage);
+                setShowManage(
+                  !showManage
+                );
 
                 setShowForm(false);
-
                 setShowParticipants(false);
-
                 setShowEditForm(false);
-
                 setEditingEvent(null);
               }}
             >
@@ -830,6 +1051,7 @@ function CoordinatorDashboard() {
             </button>
 
           </div>
+
 
           <div className="dashboard-card">
 
@@ -851,11 +1073,8 @@ function CoordinatorDashboard() {
                 );
 
                 setShowForm(false);
-
                 setShowManage(false);
-
                 setShowEditForm(false);
-
                 setEditingEvent(null);
               }}
             >
@@ -876,73 +1095,353 @@ function CoordinatorDashboard() {
             className="auth-card"
             style={{
               marginTop: "40px",
-              width: "600px",
-              maxWidth: "90%",
+              width: "650px",
+              maxWidth: "92%",
+              padding: "32px",
             }}
           >
 
-            <h2>
+            <h2
+              style={{
+                textAlign: "center",
+                marginBottom: "8px",
+              }}
+            >
               Create New Event
             </h2>
 
+            <p
+              style={{
+                textAlign: "center",
+                marginBottom: "30px",
+                opacity: 0.75,
+              }}
+            >
+              Fill in all event details carefully
+            </p>
+
             <form
-              onSubmit={handleCreateEvent}
+              onSubmit={
+                handleCreateEvent
+              }
             >
 
-              <input
-                type="text"
-                name="title"
-                placeholder="Event Title"
-                disabled={creatingEvent}
-              />
+              {/* ===============================
+                  EVENT TITLE
+              =============================== */}
 
-              <textarea
-                name="description"
-                placeholder="Event Description"
-                disabled={creatingEvent}
-              />
-
-              <input
-                type="date"
-                name="eventDate"
-                disabled={creatingEvent}
-              />
-
-              <input
-                type="text"
-                name="venue"
-                placeholder="Venue"
-                disabled={creatingEvent}
-              />
-
-              <input
-                type="number"
-                name="maxParticipants"
-                placeholder="Maximum Participants"
-                min="1"
-                defaultValue="50"
-                disabled={creatingEvent}
-              />
-
-              <small
+              <div
                 style={{
-                  display: "block",
-                  marginTop: "-8px",
-                  marginBottom: "15px",
-                  opacity: 0.8,
+                  marginBottom: "22px",
                 }}
               >
-                Set the maximum number of students who can register.
-              </small>
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Event Title
+                </label>
+
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="Enter event title"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+              </div>
+
+
+              {/* ===============================
+                  EVENT DESCRIPTION
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "22px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Event Description
+                </label>
+
+                <textarea
+                  name="description"
+                  placeholder="Enter event description"
+                  rows="4"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                  }}
+                />
+
+              </div>
+
+
+              {/* ===============================
+                  EVENT DATE
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "22px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Event Date
+                </label>
+
+                <input
+                  type="date"
+                  name="eventDate"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+              </div>
+
+
+              {/* ===============================
+                  VENUE
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "22px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Venue
+                </label>
+
+                <input
+                  type="text"
+                  name="venue"
+                  placeholder="Enter event venue"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+              </div>
+
+
+              {/* ===============================
+                  EVENT CATEGORY
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "22px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Event Category
+                </label>
+
+                <select
+                  name="category"
+                  defaultValue=""
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+
+                  <option
+                    value=""
+                    disabled
+                  >
+                    Select Event Category
+                  </option>
+
+                  <option value="Technical">
+                    Technical
+                  </option>
+
+                  <option value="Cultural">
+                    Cultural
+                  </option>
+
+                  <option value="Sports">
+                    Sports
+                  </option>
+
+                  <option value="Workshop">
+                    Workshop
+                  </option>
+
+                  <option value="Seminar">
+                    Seminar
+                  </option>
+
+                  <option value="Other">
+                    Other
+                  </option>
+
+                </select>
+
+              </div>
+
+
+              {/* ===============================
+                  MAX PARTICIPANTS
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "22px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Maximum Participants
+                </label>
+
+                <input
+                  type="number"
+                  name="maxParticipants"
+                  placeholder="Enter maximum participants"
+                  min="1"
+                  defaultValue="50"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "7px",
+                    opacity: 0.7,
+                  }}
+                >
+                  Maximum number of students who can register for this event.
+                </small>
+
+              </div>
+
+
+              {/* ===============================
+                  REGISTRATION DEADLINE
+              =============================== */}
+
+              <div
+                style={{
+                  marginBottom: "28px",
+                }}
+              >
+
+                <label
+                  style={{
+                    display: "block",
+                    fontWeight: "600",
+                    marginBottom: "8px",
+                  }}
+                >
+                  Registration Deadline
+                </label>
+
+                <input
+                  type="date"
+                  name="registrationDeadline"
+                  disabled={creatingEvent}
+                  required
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "7px",
+                    opacity: 0.7,
+                  }}
+                >
+                  Students can register only until this date.
+                </small>
+
+              </div>
+
+
+              {/* ===============================
+                  CREATE BUTTON
+              =============================== */}
 
               <button
                 type="submit"
                 className="dashboard-btn"
                 disabled={creatingEvent}
+                style={{
+                  width: "100%",
+                  minHeight: "45px",
+                }}
               >
+
                 {creatingEvent
                   ? "Creating Event..."
                   : "Create Event"}
+
               </button>
 
             </form>
@@ -950,6 +1449,7 @@ function CoordinatorDashboard() {
           </div>
 
         )}
+
 
         {/* ===============================
             MANAGE EVENTS
@@ -961,7 +1461,7 @@ function CoordinatorDashboard() {
             className="auth-card"
             style={{
               marginTop: "40px",
-              width: "1100px",
+              width: "1400px",
               maxWidth: "95%",
             }}
           >
@@ -1006,7 +1506,15 @@ function CoordinatorDashboard() {
                       </th>
 
                       <th>
-                        Date
+                        Category
+                      </th>
+
+                      <th>
+                        Event Date
+                      </th>
+
+                      <th>
+                        Registration Deadline
                       </th>
 
                       <th>
@@ -1035,80 +1543,98 @@ function CoordinatorDashboard() {
 
                   <tbody>
 
-                    {events.map((event) => (
+                    {events.map(
+                      (event) => (
 
-                      <tr
-                        key={event.event_id}
-                      >
+                        <tr
+                          key={
+                            event.event_id
+                          }
+                        >
 
-                        <td>
-                          {event.title}
-                        </td>
+                          <td>
+                            {event.title}
+                          </td>
 
-                        <td>
-                          {formatDate(
-                            event.event_date
-                          )}
-                        </td>
+                          <td>
+                            {event.category ||
+                              "Other"}
+                          </td>
 
-                        <td>
-                          {event.venue}
-                        </td>
-
-                        <td>
-                          {event.status}
-                        </td>
-
-                        <td>
-
-                          <strong>
-                            {getParticipantCount(
-                              event.title
+                          <td>
+                            {formatDate(
+                              event.event_date
                             )}
-                          </strong>
+                          </td>
 
-                        </td>
+                          <td>
+                            {event.registration_deadline
+                              ? formatDate(
+                                  event.registration_deadline
+                                )
+                              : "Not Set"}
+                          </td>
 
-                        <td>
+                          <td>
+                            {event.venue}
+                          </td>
 
-                          <strong>
-                            {event.max_participants ||
-                              50}
-                          </strong>
+                          <td>
+                            {event.status}
+                          </td>
 
-                        </td>
+                          <td>
+                            <strong>
+                              {getParticipantCount(
+                                event.title
+                              )}
+                            </strong>
+                          </td>
 
-                        <td>
+                          <td>
+                            <strong>
+                              {event.max_participants ||
+                                50}
+                            </strong>
+                          </td>
 
-                          <button
-                            className="dashboard-btn"
-                            disabled={updatingEvent}
-                            onClick={() =>
-                              handleEdit(event)
-                            }
-                          >
-                            Edit
-                          </button>
+                          <td>
 
-                          <button
-                            className="dashboard-btn"
-                            style={{
-                              marginLeft: "8px",
-                            }}
-                            onClick={() =>
-                              handleDelete(
-                                event.event_id
-                              )
-                            }
-                          >
-                            Delete
-                          </button>
+                            <button
+                              className="dashboard-btn"
+                              disabled={
+                                updatingEvent
+                              }
+                              onClick={() =>
+                                handleEdit(
+                                  event
+                                )
+                              }
+                            >
+                              Edit
+                            </button>
 
-                        </td>
+                            <button
+                              className="dashboard-btn"
+                              style={{
+                                marginLeft:
+                                  "8px",
+                              }}
+                              onClick={() =>
+                                handleDelete(
+                                  event.event_id
+                                )
+                              }
+                            >
+                              Delete
+                            </button>
 
-                      </tr>
+                          </td>
 
-                    ))}
+                        </tr>
+
+                      )
+                    )}
 
                   </tbody>
 
@@ -1142,6 +1668,7 @@ function CoordinatorDashboard() {
 
         )}
 
+
         {/* ===============================
             EDIT EVENT FORM
         =============================== */}
@@ -1153,14 +1680,30 @@ function CoordinatorDashboard() {
               className="auth-card"
               style={{
                 marginTop: "40px",
-                width: "600px",
-                maxWidth: "90%",
+                width: "650px",
+                maxWidth: "92%",
+                padding: "32px",
               }}
             >
 
-              <h2>
+              <h2
+                style={{
+                  textAlign: "center",
+                  marginBottom: "8px",
+                }}
+              >
                 Edit Event
               </h2>
+
+              <p
+                style={{
+                  textAlign: "center",
+                  marginBottom: "30px",
+                  opacity: 0.75,
+                }}
+              >
+                Update your event details
+              </p>
 
               <form
                 onSubmit={
@@ -1168,116 +1711,400 @@ function CoordinatorDashboard() {
                 }
               >
 
-                <input
-                  type="text"
-                  placeholder="Event Title"
-                  value={
-                    editingEvent.title
-                  }
-                  disabled={updatingEvent}
-                  onChange={(e) =>
-                    setEditingEvent({
-                      ...editingEvent,
-                      title:
-                        e.target.value,
-                    })
-                  }
-                />
+                {/* EVENT TITLE */}
 
-                <textarea
-                  placeholder="Event Description"
-                  value={
-                    editingEvent.description
-                  }
-                  disabled={updatingEvent}
-                  onChange={(e) =>
-                    setEditingEvent({
-                      ...editingEvent,
-                      description:
-                        e.target.value,
-                    })
-                  }
-                />
-
-                <input
-                  type="date"
-                  value={
-                    editingEvent.event_date
-                  }
-                  disabled={updatingEvent}
-                  onChange={(e) =>
-                    setEditingEvent({
-                      ...editingEvent,
-                      event_date:
-                        e.target.value,
-                    })
-                  }
-                />
-
-                <input
-                  type="text"
-                  placeholder="Venue"
-                  value={
-                    editingEvent.venue
-                  }
-                  disabled={updatingEvent}
-                  onChange={(e) =>
-                    setEditingEvent({
-                      ...editingEvent,
-                      venue:
-                        e.target.value,
-                    })
-                  }
-                />
-
-                <input
-                  type="number"
-                  placeholder="Maximum Participants"
-                  min="1"
-                  value={
-                    editingEvent.max_participants
-                  }
-                  disabled={updatingEvent}
-                  onChange={(e) =>
-                    setEditingEvent({
-                      ...editingEvent,
-                      max_participants:
-                        e.target.value,
-                    })
-                  }
-                />
-
-                <small
+                <div
                   style={{
-                    display: "block",
-                    marginTop: "-8px",
-                    marginBottom: "15px",
-                    opacity: 0.8,
+                    marginBottom: "22px",
                   }}
                 >
-                  Capacity cannot be lower than the current participant count.
-                </small>
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Event Title
+                  </label>
+
+                  <input
+                    type="text"
+                    placeholder="Enter event title"
+                    value={
+                      editingEvent.title
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        title:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* EVENT DESCRIPTION */}
+
+                <div
+                  style={{
+                    marginBottom: "22px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Event Description
+                  </label>
+
+                  <textarea
+                    placeholder="Enter event description"
+                    rows="4"
+                    value={
+                      editingEvent.description
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        description:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                      resize: "vertical",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* EVENT DATE */}
+
+                <div
+                  style={{
+                    marginBottom: "22px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Event Date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={
+                      editingEvent.event_date
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        event_date:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* VENUE */}
+
+                <div
+                  style={{
+                    marginBottom: "22px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Venue
+                  </label>
+
+                  <input
+                    type="text"
+                    placeholder="Enter event venue"
+                    value={
+                      editingEvent.venue
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        venue:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+
+                </div>
+
+
+                {/* CATEGORY */}
+
+                <div
+                  style={{
+                    marginBottom: "22px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Event Category
+                  </label>
+
+                  <select
+                    value={
+                      editingEvent.category ||
+                      "Other"
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        category:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  >
+
+                    <option value="Technical">
+                      Technical
+                    </option>
+
+                    <option value="Cultural">
+                      Cultural
+                    </option>
+
+                    <option value="Sports">
+                      Sports
+                    </option>
+
+                    <option value="Workshop">
+                      Workshop
+                    </option>
+
+                    <option value="Seminar">
+                      Seminar
+                    </option>
+
+                    <option value="Other">
+                      Other
+                    </option>
+
+                  </select>
+
+                </div>
+
+
+                {/* MAX PARTICIPANTS */}
+
+                <div
+                  style={{
+                    marginBottom: "22px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Maximum Participants
+                  </label>
+
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Enter maximum participants"
+                    value={
+                      editingEvent.max_participants
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        max_participants:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "7px",
+                      opacity: 0.7,
+                    }}
+                  >
+                    Capacity cannot be lower than the current participant count.
+                  </small>
+
+                </div>
+
+
+                {/* REGISTRATION DEADLINE */}
+
+                <div
+                  style={{
+                    marginBottom: "28px",
+                  }}
+                >
+
+                  <label
+                    style={{
+                      display: "block",
+                      fontWeight: "600",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Registration Deadline
+                  </label>
+
+                  <input
+                    type="date"
+                    value={
+                      editingEvent.registration_deadline ||
+                      ""
+                    }
+                    disabled={
+                      updatingEvent
+                    }
+                    onChange={(e) =>
+                      setEditingEvent({
+                        ...editingEvent,
+                        registration_deadline:
+                          e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      boxSizing:
+                        "border-box",
+                    }}
+                  />
+
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "7px",
+                      opacity: 0.7,
+                    }}
+                  >
+                    Students can register only until this date.
+                  </small>
+
+                </div>
+
+
+                {/* UPDATE BUTTON */}
 
                 <button
                   type="submit"
                   className="dashboard-btn"
-                  disabled={updatingEvent}
+                  disabled={
+                    updatingEvent
+                  }
+                  style={{
+                    minHeight: "45px",
+                  }}
                 >
+
                   {updatingEvent
                     ? "Updating Event..."
                     : "Update Event"}
+
                 </button>
+
+
+                {/* CANCEL BUTTON */}
 
                 <button
                   type="button"
                   className="dashboard-btn"
                   style={{
                     marginLeft: "10px",
+                    minHeight: "45px",
                   }}
-                  disabled={updatingEvent}
+                  disabled={
+                    updatingEvent
+                  }
                   onClick={() => {
-                    setShowEditForm(false);
-                    setEditingEvent(null);
+                    setShowEditForm(
+                      false
+                    );
+
+                    setEditingEvent(
+                      null
+                    );
                   }}
                 >
                   Cancel
@@ -1288,6 +2115,7 @@ function CoordinatorDashboard() {
             </div>
 
           )}
+
 
         {/* ===============================
             PARTICIPANTS
@@ -1322,14 +2150,12 @@ function CoordinatorDashboard() {
             ) : participants.length > 0 ? (
 
               <>
-                {/* ===============================
-                    EXPORT BUTTON
-                =============================== */}
 
                 <div
                   style={{
                     display: "flex",
-                    justifyContent: "flex-end",
+                    justifyContent:
+                      "flex-end",
                     marginBottom: "20px",
                   }}
                 >
@@ -1346,6 +2172,7 @@ function CoordinatorDashboard() {
 
                 </div>
 
+
                 <div
                   style={{
                     overflowX: "auto",
@@ -1355,7 +2182,8 @@ function CoordinatorDashboard() {
                   <table
                     style={{
                       width: "100%",
-                      borderCollapse: "collapse",
+                      borderCollapse:
+                        "collapse",
                       textAlign: "center",
                     }}
                   >
@@ -1394,11 +2222,15 @@ function CoordinatorDashboard() {
                           >
 
                             <td>
-                              {p.student_email}
+                              {
+                                p.student_email
+                              }
                             </td>
 
                             <td>
-                              {p.event_name}
+                              {
+                                p.event_name
+                              }
                             </td>
 
                             <td>
@@ -1408,7 +2240,9 @@ function CoordinatorDashboard() {
                             </td>
 
                             <td>
-                              {p.event_location}
+                              {
+                                p.event_location
+                              }
                             </td>
 
                           </tr>
@@ -1421,6 +2255,7 @@ function CoordinatorDashboard() {
                   </table>
 
                 </div>
+
               </>
 
             ) : (

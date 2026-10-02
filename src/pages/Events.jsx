@@ -4,32 +4,70 @@ import "../App.css";
 
 function Events() {
   const [events, setEvents] = useState([]);
+  const [capacityData, setCapacityData] = useState({});
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [filterCategory, setFilterCategory] = useState("All");
   const [sortBy, setSortBy] = useState("date-asc");
 
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   // ===============================
-  // FETCH EVENTS
+  // FETCH EVENTS + CAPACITY
   // ===============================
 
   useEffect(() => {
     setLoading(true);
 
-    fetch("http://localhost:5000/events")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch events");
-        }
+    Promise.all([
+      fetch("http://localhost:5000/events"),
+      fetch("http://localhost:5000/event-capacity"),
+    ])
+      .then(
+        async ([eventsResponse, capacityResponse]) => {
+          if (!eventsResponse.ok) {
+            throw new Error(
+              "Failed to fetch events"
+            );
+          }
 
-        return response.json();
-      })
-      .then((data) => {
-        setEvents(data);
-      })
+          if (!capacityResponse.ok) {
+            throw new Error(
+              "Failed to fetch event capacity"
+            );
+          }
+
+          const eventsData =
+            await eventsResponse.json();
+
+          const capacityResult =
+            await capacityResponse.json();
+
+          return {
+            eventsData,
+            capacityResult,
+          };
+        }
+      )
+      .then(
+        ({
+          eventsData,
+          capacityResult,
+        }) => {
+          setEvents(eventsData);
+
+          const capacityMap = {};
+
+          capacityResult.forEach((item) => {
+            capacityMap[item.event_id] =
+              item;
+          });
+
+          setCapacityData(capacityMap);
+        }
+      )
       .catch((error) => {
         console.log(error);
 
@@ -61,20 +99,107 @@ function Events() {
   };
 
   // ===============================
+  // REGISTRATION DEADLINE CHECK
+  // ===============================
+
+  const isRegistrationClosed = (
+    registrationDeadline
+  ) => {
+    if (!registrationDeadline) {
+      return false;
+    }
+
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(
+      today.getMonth() + 1
+    ).padStart(2, "0");
+    const day = String(
+      today.getDate()
+    ).padStart(2, "0");
+
+    const todayString =
+      `${year}-${month}-${day}`;
+
+    const deadlineString = String(
+      registrationDeadline
+    ).substring(0, 10);
+
+    return todayString > deadlineString;
+  };
+
+  // ===============================
+  // FORMAT DATE
+  // ===============================
+
+  const formatDate = (date) => {
+    if (!date) {
+      return "Not Set";
+    }
+
+    return new Date(
+      date
+    ).toLocaleDateString();
+  };
+
+  // ===============================
   // HANDLE EVENT REGISTRATION
   // ===============================
 
   const handleRegister = async (event) => {
-    if (isEventCompleted(event.event_date)) {
+    // COMPLETED EVENT CHECK
+    if (
+      isEventCompleted(
+        event.event_date
+      )
+    ) {
       alert(
         "Registration is not available for completed events."
       );
       return;
     }
 
+    // DEADLINE CHECK
+    if (
+      isRegistrationClosed(
+        event.registration_deadline
+      )
+    ) {
+      alert(
+        "Registration deadline has passed."
+      );
+      return;
+    }
+
+    // CAPACITY CHECK
+    const capacity =
+      capacityData[event.event_id];
+
+    if (
+      capacity &&
+      Number(
+        capacity.participant_count
+      ) >=
+        Number(
+          capacity.max_participants
+        )
+    ) {
+      alert(
+        `Registration closed. Maximum capacity of ${capacity.max_participants} participants has been reached.`
+      );
+
+      return;
+    }
+
+    // STUDENT EMAIL
     const student_email =
-      localStorage.getItem("student_email") ||
-      localStorage.getItem("email");
+      localStorage.getItem(
+        "student_email"
+      ) ||
+      localStorage.getItem(
+        "email"
+      );
 
     if (!student_email) {
       alert(
@@ -88,25 +213,65 @@ function Events() {
         "http://localhost:5000/event-register",
         {
           method: "POST",
+
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
+
           body: JSON.stringify({
-            student_email: student_email,
-            event_name: event.title,
-            event_date: event.event_date,
-            event_location: event.venue,
+            student_email:
+              student_email,
+
+            event_name:
+              event.title,
+
+            event_date:
+              event.event_date,
+
+            event_location:
+              event.venue,
           }),
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (response.ok) {
         alert(
           data.message ||
             "Event registered successfully!"
         );
+
+        // UPDATE CAPACITY
+        try {
+          const capacityResponse =
+            await fetch(
+              "http://localhost:5000/event-capacity"
+            );
+
+          if (capacityResponse.ok) {
+            const updatedCapacity =
+              await capacityResponse.json();
+
+            const updatedMap = {};
+
+            updatedCapacity.forEach(
+              (item) => {
+                updatedMap[
+                  item.event_id
+                ] = item;
+              }
+            );
+
+            setCapacityData(
+              updatedMap
+            );
+          }
+        } catch (error) {
+          console.log(error);
+        }
       } else {
         alert(
           data.message ||
@@ -123,81 +288,119 @@ function Events() {
   };
 
   // ===============================
-  // SEARCH + STATUS FILTER
+  // SEARCH + STATUS + CATEGORY FILTER
   // ===============================
 
-  const filteredEvents = events.filter((event) => {
-    const searchText = search
-      .trim()
-      .toLowerCase();
+  const filteredEvents =
+    events.filter((event) => {
+      const searchText =
+        search
+          .trim()
+          .toLowerCase();
 
-    const matchesSearch =
-      !searchText ||
-      event.title
-        ?.toLowerCase()
-        .includes(searchText) ||
-      event.description
-        ?.toLowerCase()
-        .includes(searchText) ||
-      event.venue
-        ?.toLowerCase()
-        .includes(searchText);
+      const matchesSearch =
+        !searchText ||
+        event.title
+          ?.toLowerCase()
+          .includes(searchText) ||
+        event.description
+          ?.toLowerCase()
+          .includes(searchText) ||
+        event.venue
+          ?.toLowerCase()
+          .includes(searchText);
 
-    const matchesStatus =
-      filterStatus === "All" ||
-      event.status?.toLowerCase() ===
-        filterStatus.toLowerCase();
+      const matchesStatus =
+        filterStatus === "All" ||
+        event.status
+          ?.toLowerCase() ===
+          filterStatus.toLowerCase();
 
-    return matchesSearch && matchesStatus;
-  });
+      const matchesCategory =
+        filterCategory === "All" ||
+        (
+          event.category ||
+          "Other"
+        )
+          .toLowerCase() ===
+          filterCategory.toLowerCase();
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCategory
+      );
+    });
 
   // ===============================
   // SORT EVENTS
   // ===============================
 
-  const sortedEvents = [...filteredEvents].sort(
-    (a, b) => {
-      if (sortBy === "date-asc") {
-        return (
-          new Date(a.event_date) -
-          new Date(b.event_date)
-        );
-      }
+  const sortedEvents =
+    [...filteredEvents].sort(
+      (a, b) => {
+        if (
+          sortBy === "date-asc"
+        ) {
+          return (
+            new Date(
+              a.event_date
+            ) -
+            new Date(
+              b.event_date
+            )
+          );
+        }
 
-      if (sortBy === "date-desc") {
-        return (
-          new Date(b.event_date) -
-          new Date(a.event_date)
-        );
-      }
+        if (
+          sortBy === "date-desc"
+        ) {
+          return (
+            new Date(
+              b.event_date
+            ) -
+            new Date(
+              a.event_date
+            )
+          );
+        }
 
-      if (sortBy === "title-asc") {
-        return (
-          (a.title || "").localeCompare(
-            b.title || ""
-          )
-        );
-      }
+        if (
+          sortBy === "title-asc"
+        ) {
+          return (
+            (
+              a.title || ""
+            ).localeCompare(
+              b.title || ""
+            )
+          );
+        }
 
-      if (sortBy === "title-desc") {
-        return (
-          (b.title || "").localeCompare(
-            a.title || ""
-          )
-        );
-      }
+        if (
+          sortBy === "title-desc"
+        ) {
+          return (
+            (
+              b.title || ""
+            ).localeCompare(
+              a.title || ""
+            )
+          );
+        }
 
-      return 0;
-    }
-  );
+        return 0;
+      }
+    );
 
   // ===============================
-  // CLEAR SEARCH / FILTER / SORT
+  // CLEAR FILTERS
   // ===============================
 
   const clearFilters = () => {
     setSearch("");
     setFilterStatus("All");
+    setFilterCategory("All");
     setSortBy("date-asc");
   };
 
@@ -294,6 +497,8 @@ function Events() {
 
         <div className="events-controls">
 
+          {/* SEARCH */}
+
           <input
             type="text"
             placeholder="Search by title, description or venue..."
@@ -303,10 +508,14 @@ function Events() {
             }
           />
 
+          {/* STATUS */}
+
           <select
             value={filterStatus}
             onChange={(e) =>
-              setFilterStatus(e.target.value)
+              setFilterStatus(
+                e.target.value
+              )
             }
           >
 
@@ -328,10 +537,55 @@ function Events() {
 
           </select>
 
+          {/* CATEGORY */}
+
+          <select
+            value={filterCategory}
+            onChange={(e) =>
+              setFilterCategory(
+                e.target.value
+              )
+            }
+          >
+
+            <option value="All">
+              All Categories
+            </option>
+
+            <option value="Technical">
+              Technical
+            </option>
+
+            <option value="Cultural">
+              Cultural
+            </option>
+
+            <option value="Sports">
+              Sports
+            </option>
+
+            <option value="Workshop">
+              Workshop
+            </option>
+
+            <option value="Seminar">
+              Seminar
+            </option>
+
+            <option value="Other">
+              Other
+            </option>
+
+          </select>
+
+          {/* SORT */}
+
           <select
             value={sortBy}
             onChange={(e) =>
-              setSortBy(e.target.value)
+              setSortBy(
+                e.target.value
+              )
             }
           >
 
@@ -352,6 +606,8 @@ function Events() {
             </option>
 
           </select>
+
+          {/* CLEAR */}
 
           <button
             type="button"
@@ -377,18 +633,19 @@ function Events() {
           >
 
             <p>
-
               Showing{" "}
-
               <strong>
-                {sortedEvents.length}
+                {
+                  sortedEvents.length
+                }
               </strong>{" "}
-
               event
-              {sortedEvents.length !== 1
-                ? "s"
-                : ""}
-
+              {
+                sortedEvents.length !==
+                1
+                  ? "s"
+                  : ""
+              }
             </p>
 
           </div>
@@ -415,146 +672,367 @@ function Events() {
 
             </div>
 
-          ) : sortedEvents.length > 0 ? (
+          ) : sortedEvents.length >
+            0 ? (
 
-            sortedEvents.map((event) => {
+            sortedEvents.map(
+              (event) => {
 
-              const completed =
-                isEventCompleted(
-                  event.event_date
-                );
+                const completed =
+                  isEventCompleted(
+                    event.event_date
+                  );
 
-              const timing =
-                getEventTiming(
-                  event.event_date
-                );
+                const timing =
+                  getEventTiming(
+                    event.event_date
+                  );
 
-              return (
+                const deadlineClosed =
+                  isRegistrationClosed(
+                    event.registration_deadline
+                  );
 
-                <div
-                  className="event-card"
-                  key={event.event_id}
-                >
+                const capacity =
+                  capacityData[
+                    event.event_id
+                  ];
 
-                  <div className="event-card-top">
+                const maxParticipants =
+                  capacity
+                    ? Number(
+                        capacity.max_participants
+                      )
+                    : Number(
+                        event.max_participants
+                      ) || 50;
 
-                    <span className="event-badge">
-                      {event.status}
-                    </span>
+                const participantCount =
+                  capacity
+                    ? Number(
+                        capacity.participant_count
+                      )
+                    : 0;
 
-                    <span
-                      className="event-badge"
-                      style={{
-                        marginLeft: "8px",
-                      }}
-                    >
-                      {timing}
-                    </span>
+                const remainingSeats =
+                  capacity
+                    ? Number(
+                        capacity.remaining_seats
+                      )
+                    : Math.max(
+                        maxParticipants -
+                          participantCount,
+                        0
+                      );
 
-                  </div>
+                const progressPercentage =
+                  capacity
+                    ? Number(
+                        capacity.progress_percentage
+                      )
+                    : 0;
 
-                  <h2>
-                    {event.title}
-                  </h2>
+                const eventFull =
+                  participantCount >=
+                  maxParticipants;
 
-                  <p className="event-description">
-                    {event.description}
-                  </p>
-
-                  <div className="event-details">
-
-                    <p>
-
-                      <strong>
-                        Date
-                      </strong>
-
-                      <span>
-                        {new Date(
-                          event.event_date
-                        ).toLocaleString()}
-                      </span>
-
-                    </p>
-
-                    <p>
-
-                      <strong>
-                        Venue
-                      </strong>
-
-                      <span>
-                        {event.venue}
-                      </span>
-
-                    </p>
-
-                    <p>
-
-                      <strong>
-                        Capacity
-                      </strong>
-
-                      <span>
-                        {event.max_participants ||
-                          50}{" "}
-                        participants
-                      </span>
-
-                    </p>
-
-                  </div>
-
-                  {/* VIEW DETAILS */}
-
-                  <button
-                    type="button"
-                    className="dashboard-btn"
-                    style={{
-                      width: "100%",
-                      marginBottom: "10px",
-                    }}
-                    onClick={() =>
-                      setSelectedEvent(event)
+                return (
+                  <div
+                    className="event-card"
+                    key={
+                      event.event_id
                     }
                   >
-                    View Details
-                  </button>
 
-                  {/* REGISTRATION */}
+                    {/* STATUS + TIMING */}
 
-                  {completed ? (
+                    <div className="event-card-top">
 
-                    <div className="unavailable">
-                      Event Completed
+                      <span className="event-badge">
+                        {
+                          event.status
+                        }
+                      </span>
+
+                      <span
+                        className="event-badge"
+                        style={{
+                          marginLeft:
+                            "8px",
+                        }}
+                      >
+                        {timing}
+                      </span>
+
                     </div>
 
-                  ) : event.status &&
-                    event.status.toLowerCase() ===
-                      "approved" ? (
+                    {/* TITLE */}
+
+                    <h2>
+                      {event.title}
+                    </h2>
+
+                    {/* DESCRIPTION */}
+
+                    <p className="event-description">
+                      {
+                        event.description
+                      }
+                    </p>
+
+                    {/* CATEGORY */}
+
+                    <div
+                      style={{
+                        marginTop:
+                          "10px",
+                        marginBottom:
+                          "10px",
+                      }}
+                    >
+
+                      <span className="event-badge">
+                        {
+                          event.category ||
+                          "Other"
+                        }
+                      </span>
+
+                    </div>
+
+                    {/* EVENT DETAILS */}
+
+                    <div className="event-details">
+
+                      <p>
+
+                        <strong>
+                          Date
+                        </strong>
+
+                        <span>
+                          {new Date(
+                            event.event_date
+                          ).toLocaleString()}
+                        </span>
+
+                      </p>
+
+                      <p>
+
+                        <strong>
+                          Venue
+                        </strong>
+
+                        <span>
+                          {
+                            event.venue
+                          }
+                        </span>
+
+                      </p>
+
+                      {/* REGISTRATION DEADLINE */}
+
+                      <p>
+
+                        <strong>
+                          Registration Deadline
+                        </strong>
+
+                        <span>
+                          {
+                            event.registration_deadline
+                              ? formatDate(
+                                  event.registration_deadline
+                                )
+                              : "Not Set"
+                          }
+                        </span>
+
+                      </p>
+
+                    </div>
+
+                    {/* =========================
+                        SEAT AVAILABILITY
+                    ========================= */}
+
+                    <div
+                      style={{
+                        marginTop:
+                          "15px",
+                        marginBottom:
+                          "18px",
+                      }}
+                    >
+
+                      <div
+                        style={{
+                          display:
+                            "flex",
+                          justifyContent:
+                            "space-between",
+                          gap: "10px",
+                          marginBottom:
+                            "7px",
+                          fontSize:
+                            "14px",
+                          fontWeight:
+                            "600",
+                        }}
+                      >
+
+                        <span>
+                          Participants:{" "}
+                          {
+                            participantCount
+                          }{" "}
+                          /{" "}
+                          {
+                            maxParticipants
+                          }
+                        </span>
+
+                        <span>
+                          {
+                            remainingSeats >
+                            0
+                              ? `${remainingSeats} seats left`
+                              : "Full"
+                          }
+                        </span>
+
+                      </div>
+
+                      <div
+                        style={{
+                          width:
+                            "100%",
+                          height:
+                            "9px",
+                          borderRadius:
+                            "10px",
+                          background:
+                            "#e5e7eb",
+                          overflow:
+                            "hidden",
+                        }}
+                      >
+
+                        <div
+                          style={{
+                            width: `${progressPercentage}%`,
+                            height:
+                              "100%",
+                            borderRadius:
+                              "10px",
+                            background:
+                              "currentColor",
+                            transition:
+                              "width 0.3s ease",
+                          }}
+                        />
+
+                      </div>
+
+                      <p
+                        style={{
+                          textAlign:
+                            "right",
+                          marginTop:
+                            "5px",
+                          marginBottom:
+                            0,
+                          fontSize:
+                            "12px",
+                        }}
+                      >
+                        {
+                          progressPercentage
+                        }
+                        % capacity filled
+                      </p>
+
+                    </div>
+
+                    {/* =========================
+                        VIEW DETAILS
+                    ========================= */}
 
                     <button
-                      className="event-register-btn"
+                      type="button"
+                      className="dashboard-btn"
+                      style={{
+                        width:
+                          "100%",
+                        marginBottom:
+                          "10px",
+                      }}
                       onClick={() =>
-                        handleRegister(event)
+                        setSelectedEvent(
+                          event
+                        )
                       }
                     >
-                      Register for Event
+                      View Details
                     </button>
 
-                  ) : (
+                    {/* =========================
+                        REGISTRATION
+                    ========================= */}
 
-                    <div className="unavailable">
-                      Registration unavailable
-                    </div>
+                    {completed ? (
 
-                  )}
+                      <div className="unavailable">
+                        Event Completed
+                      </div>
 
-                </div>
+                    ) : deadlineClosed ? (
 
-              );
+                      <div className="unavailable">
+                        Registration Closed
+                      </div>
 
-            })
+                    ) : (
+                      event.status &&
+                      event.status.toLowerCase() ===
+                        "approved" ? (
+
+                        eventFull ? (
+
+                          <div className="unavailable">
+                            Event Full
+                          </div>
+
+                        ) : (
+
+                          <button
+                            className="event-register-btn"
+                            onClick={() =>
+                              handleRegister(
+                                event
+                              )
+                            }
+                          >
+                            Register for Event
+                          </button>
+
+                        )
+
+                      ) : (
+
+                        <div className="unavailable">
+                          Registration unavailable
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+                );
+              }
+            )
 
           ) : (
 
@@ -565,8 +1043,8 @@ function Events() {
               </h3>
 
               <p>
-                Try changing your search, status filter
-                or sorting option.
+                Try changing your search, status,
+                category filter or sorting option.
               </p>
 
               <button
@@ -592,14 +1070,19 @@ function Events() {
       {selectedEvent && (
 
         <div
-          onClick={closeEventDetails}
+          onClick={
+            closeEventDetails
+          }
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0, 0, 0, 0.65)",
+            background:
+              "rgba(0, 0, 0, 0.65)",
             display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
+            justifyContent:
+              "center",
+            alignItems:
+              "center",
             padding: "20px",
             zIndex: 9999,
           }}
@@ -623,38 +1106,56 @@ function Events() {
             }}
           >
 
+            {/* MODAL HEADER */}
+
             <div
               style={{
-                display: "flex",
+                display:
+                  "flex",
                 justifyContent:
                   "space-between",
-                alignItems: "center",
+                alignItems:
+                  "center",
                 gap: "15px",
-                marginBottom: "20px",
+                marginBottom:
+                  "20px",
               }}
             >
 
               <h2
                 style={{
                   margin: 0,
-                  fontSize: "28px",
+                  fontSize:
+                    "28px",
                 }}
               >
-                {selectedEvent.title}
+                {
+                  selectedEvent.title
+                }
               </h2>
 
               <button
                 type="button"
-                onClick={closeEventDetails}
+                onClick={
+                  closeEventDetails
+                }
                 style={{
-                  border: "none",
-                  background: "#eeeeee",
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  fontSize: "20px",
-                  fontWeight: "700",
+                  border:
+                    "none",
+                  background:
+                    "#eeeeee",
+                  width:
+                    "40px",
+                  height:
+                    "40px",
+                  borderRadius:
+                    "50%",
+                  cursor:
+                    "pointer",
+                  fontSize:
+                    "20px",
+                  fontWeight:
+                    "700",
                 }}
               >
                 ×
@@ -662,43 +1163,54 @@ function Events() {
 
             </div>
 
+            {/* BADGES */}
+
             <div
               style={{
-                marginBottom: "20px",
-                display: "flex",
-                flexWrap: "wrap",
+                marginBottom:
+                  "20px",
+                display:
+                  "flex",
+                flexWrap:
+                  "wrap",
                 gap: "8px",
               }}
             >
 
-              <span
-                className="event-badge"
-                style={{
-                  display: "inline-block",
-                }}
-              >
-                {selectedEvent.status}
+              <span className="event-badge">
+                {
+                  selectedEvent.status
+                }
               </span>
 
-              <span
-                className="event-badge"
-                style={{
-                  display: "inline-block",
-                }}
-              >
-                {getEventTiming(
-                  selectedEvent.event_date
-                )}
+              <span className="event-badge">
+                {
+                  getEventTiming(
+                    selectedEvent.event_date
+                  )
+                }
+              </span>
+
+              <span className="event-badge">
+                {
+                  selectedEvent.category ||
+                  "Other"
+                }
               </span>
 
             </div>
 
+            {/* DETAILS */}
+
             <div
               style={{
-                display: "grid",
+                display:
+                  "grid",
                 gap: "16px",
               }}
             >
+
+              {/* DESCRIPTION */}
 
               <div>
 
@@ -708,14 +1220,19 @@ function Events() {
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
-                  {selectedEvent.description ||
-                    "No description available"}
+                  {
+                    selectedEvent.description ||
+                    "No description available"
+                  }
                 </p>
 
               </div>
+
+              {/* DATE */}
 
               <div>
 
@@ -725,7 +1242,8 @@ function Events() {
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
                   {new Date(
@@ -735,6 +1253,8 @@ function Events() {
 
               </div>
 
+              {/* VENUE */}
+
               <div>
 
                 <strong>
@@ -743,31 +1263,135 @@ function Events() {
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
-                  {selectedEvent.venue ||
-                    "Venue not available"}
+                  {
+                    selectedEvent.venue ||
+                    "Venue not available"
+                  }
                 </p>
 
               </div>
+
+              {/* CATEGORY */}
 
               <div>
 
                 <strong>
-                  Maximum Participants
+                  Category
                 </strong>
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
-                  {selectedEvent.max_participants ||
-                    50}
+                  {
+                    selectedEvent.category ||
+                    "Other"
+                  }
                 </p>
 
               </div>
+
+              {/* REGISTRATION DEADLINE */}
+
+              <div>
+
+                <strong>
+                  Registration Deadline
+                </strong>
+
+                <p
+                  style={{
+                    marginTop:
+                      "6px",
+                  }}
+                >
+                  {
+                    selectedEvent.registration_deadline
+                      ? formatDate(
+                          selectedEvent.registration_deadline
+                        )
+                      : "Not Set"
+                  }
+                </p>
+
+              </div>
+
+              {/* CAPACITY */}
+
+              <div>
+
+                <strong>
+                  Participant Capacity
+                </strong>
+
+                <p
+                  style={{
+                    marginTop:
+                      "6px",
+                  }}
+                >
+
+                  {
+                    capacityData[
+                      selectedEvent.event_id
+                    ]?.participant_count ||
+                    0
+                  }
+
+                  {" / "}
+
+                  {
+                    capacityData[
+                      selectedEvent.event_id
+                    ]?.max_participants ||
+                    selectedEvent.max_participants ||
+                    50
+                  }
+
+                  {" participants"}
+
+                </p>
+
+              </div>
+
+              {/* REMAINING SEATS */}
+
+              <div>
+
+                <strong>
+                  Remaining Seats
+                </strong>
+
+                <p
+                  style={{
+                    marginTop:
+                      "6px",
+                  }}
+                >
+
+                  {
+                    capacityData[
+                      selectedEvent.event_id
+                    ]?.remaining_seats ??
+                    Math.max(
+                      Number(
+                        selectedEvent.max_participants
+                      ) || 50,
+                      0
+                    )
+                  }
+
+                </p>
+
+              </div>
+
+              {/* EVENT ID */}
 
               <div>
 
@@ -777,13 +1401,18 @@ function Events() {
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
-                  {selectedEvent.event_id}
+                  {
+                    selectedEvent.event_id
+                  }
                 </p>
 
               </div>
+
+              {/* COORDINATOR ID */}
 
               <div>
 
@@ -793,15 +1422,22 @@ function Events() {
 
                 <p
                   style={{
-                    marginTop: "6px",
+                    marginTop:
+                      "6px",
                   }}
                 >
-                  {selectedEvent.coordinator_id}
+                  {
+                    selectedEvent.coordinator_id
+                  }
                 </p>
 
               </div>
 
             </div>
+
+            {/* =========================
+                MODAL REGISTRATION
+            ========================= */}
 
             {isEventCompleted(
               selectedEvent.event_date
@@ -810,39 +1446,86 @@ function Events() {
               <div
                 className="unavailable"
                 style={{
-                  marginTop: "20px",
+                  marginTop:
+                    "20px",
                 }}
               >
                 Event Completed
+              </div>
+
+            ) : isRegistrationClosed(
+                selectedEvent.registration_deadline
+              ) ? (
+
+              <div
+                className="unavailable"
+                style={{
+                  marginTop:
+                    "20px",
+                }}
+              >
+                Registration Closed
               </div>
 
             ) : selectedEvent.status &&
               selectedEvent.status.toLowerCase() ===
                 "approved" ? (
 
-              <button
-                type="button"
-                className="event-register-btn"
-                style={{
-                  width: "100%",
-                  marginTop: "20px",
-                }}
-                onClick={() => {
-                  closeEventDetails();
-                  handleRegister(
-                    selectedEvent
-                  );
-                }}
-              >
-                Register for Event
-              </button>
+              capacityData[
+                selectedEvent.event_id
+              ] &&
+              Number(
+                capacityData[
+                  selectedEvent.event_id
+                ].participant_count
+              ) >=
+                Number(
+                  capacityData[
+                    selectedEvent.event_id
+                  ].max_participants
+                ) ? (
+
+                <div
+                  className="unavailable"
+                  style={{
+                    marginTop:
+                      "20px",
+                  }}
+                >
+                  Event Full
+                </div>
+
+              ) : (
+
+                <button
+                  type="button"
+                  className="event-register-btn"
+                  style={{
+                    width:
+                      "100%",
+                    marginTop:
+                      "20px",
+                  }}
+                  onClick={() => {
+                    closeEventDetails();
+
+                    handleRegister(
+                      selectedEvent
+                    );
+                  }}
+                >
+                  Register for Event
+                </button>
+
+              )
 
             ) : (
 
               <div
                 className="unavailable"
                 style={{
-                  marginTop: "20px",
+                  marginTop:
+                    "20px",
                 }}
               >
                 Registration unavailable
